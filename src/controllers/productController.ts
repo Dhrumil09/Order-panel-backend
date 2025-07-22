@@ -39,6 +39,11 @@ export class ProductController {
   async getProductById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Product ID is required", 400);
+        return;
+      }
+
       const product = await productService.getProductById(id);
 
       if (!product) {
@@ -92,6 +97,11 @@ export class ProductController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Product ID is required", 400);
+        return;
+      }
+
       const product = await productService.updateProduct(
         id,
         req.body,
@@ -125,6 +135,11 @@ export class ProductController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Product ID is required", 400);
+        return;
+      }
+
       const deleted = await productService.deleteProduct(id, req.user.id);
 
       if (!deleted) {
@@ -147,6 +162,11 @@ export class ProductController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Product ID is required", 400);
+        return;
+      }
+
       const restored = await productService.restoreProduct(id, req.user.id);
 
       if (!restored) {

@@ -54,17 +54,18 @@ export function validateSearchParams(
   req: Request,
   res: Response,
   next: NextFunction
-) {
+): void {
   const { page, limit, sortOrder } = req.query;
 
   if (page && (!Number.isInteger(Number(page)) || Number(page) < 1)) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: {
         type: "VALIDATION_ERROR",
         message: "Page must be a positive integer",
       },
     });
+    return;
   }
 
   if (
@@ -73,23 +74,25 @@ export function validateSearchParams(
       Number(limit) < 1 ||
       Number(limit) > 100)
   ) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: {
         type: "VALIDATION_ERROR",
         message: "Limit must be between 1 and 100",
       },
     });
+    return;
   }
 
   if (sortOrder && !["asc", "desc"].includes(sortOrder as string)) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: {
         type: "VALIDATION_ERROR",
         message: 'Sort order must be either "asc" or "desc"',
       },
     });
+    return;
   }
 
   next();

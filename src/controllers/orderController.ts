@@ -42,6 +42,11 @@ export class OrderController {
   async getOrderById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Order ID is required", 400);
+        return;
+      }
+
       const order = await orderService.getOrderById(id);
 
       if (!order) {
@@ -89,6 +94,11 @@ export class OrderController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Order ID is required", 400);
+        return;
+      }
+
       const { status, trackingNumber, notes } = req.body;
 
       const updatedOrder = await orderService.updateOrderStatus(
@@ -123,6 +133,11 @@ export class OrderController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Order ID is required", 400);
+        return;
+      }
+
       const deleted = await orderService.deleteOrder(id, req.user.id);
 
       if (!deleted) {
@@ -145,6 +160,11 @@ export class OrderController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Order ID is required", 400);
+        return;
+      }
+
       const restored = await orderService.restoreOrder(id, req.user.id);
 
       if (!restored) {
@@ -175,7 +195,7 @@ export const orderValidation = {
       "delivered",
       "cancelled",
     ]),
-    commonValidations.requiredArray("orderItems"),
+    body("orderItems").isArray().withMessage("Order items must be an array"),
     commonValidations.optionalString("shippingMethod"),
     commonValidations.optionalString("notes"),
   ]),

@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-import authService, {
-  LoginRequest,
-  CreateUserRequest,
-} from "../services/authService";
+import authService from "../services/authService";
 import { sendSuccessResponse, sendErrorResponse } from "../utils/response";
 import { validate, commonValidations } from "../utils/validation";
 import { body } from "express-validator";
@@ -10,27 +7,52 @@ import { body } from "express-validator";
 export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const loginData: LoginRequest = req.body;
-      const result = await authService.login(loginData);
-
+      const result = await authService.login(req.body);
       sendSuccessResponse(res, result, "Login successful");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      sendErrorResponse(res, "Login failed", 401, error);
+      sendErrorResponse(res, error.message, 401, {
+        type: "AUTHENTICATION_ERROR",
+        message: error.message,
+      });
+    }
+  }
+
+  async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        sendErrorResponse(res, "Refresh token is required", 400, {
+          type: "VALIDATION_ERROR",
+          message: "Refresh token is required",
+        });
+        return;
+      }
+
+      const result = await authService.refreshToken(refreshToken);
+      sendSuccessResponse(res, result, "Token refreshed successfully");
+    } catch (error: any) {
+      console.error("Refresh token error:", error);
+      sendErrorResponse(res, error.message, 401, {
+        type: "AUTHENTICATION_ERROR",
+        message: error.message,
+      });
     }
   }
 
   async createUser(req: Request, res: Response): Promise<void> {
     try {
-      const userData: CreateUserRequest = req.body;
-      const user = await authService.createUser(userData);
-
+      const user = await authService.createUser(req.body);
       sendSuccessResponse(res, { user }, "User created successfully", 201);
     } catch (error: any) {
-      console.error("Error creating user:", error);
+      console.error("Create user error:", error);
 
-      if (error.message?.includes("already exists")) {
-        sendErrorResponse(res, error.message, 400);
+      if (error.message.includes("already exists")) {
+        sendErrorResponse(res, error.message, 400, {
+          type: "VALIDATION_ERROR",
+          message: error.message,
+        });
         return;
       }
 
@@ -41,21 +63,27 @@ export class AuthController {
   async getCurrentUser(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
-        sendErrorResponse(res, "User not authenticated", 401);
+        sendErrorResponse(res, "User not authenticated", 401, {
+          type: "AUTHENTICATION_ERROR",
+          message: "User not authenticated",
+        });
         return;
       }
 
       const user = await authService.getUserById(req.user.id);
 
       if (!user) {
-        sendErrorResponse(res, "User not found", 404);
+        sendErrorResponse(res, "User not found", 404, {
+          type: "NOT_FOUND",
+          message: "User not found",
+        });
         return;
       }
 
       sendSuccessResponse(res, { user }, "Current user retrieved successfully");
-    } catch (error) {
-      console.error("Error fetching current user:", error);
-      sendErrorResponse(res, "Failed to fetch current user", 500, error);
+    } catch (error: any) {
+      console.error("Get current user error:", error);
+      sendErrorResponse(res, "Failed to get current user", 500, error);
     }
   }
 
@@ -63,32 +91,26 @@ export class AuthController {
     try {
       const users = await authService.getAllUsers();
       sendSuccessResponse(res, { users }, "Users retrieved successfully");
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      sendErrorResponse(res, "Failed to fetch users", 500, error);
+    } catch (error: any) {
+      console.error("Get all users error:", error);
+      sendErrorResponse(res, "Failed to get users", 500, error);
     }
   }
 }
 
-// Validation middleware for auth operations
+// Validation middleware for authentication operations
 export const authValidation = {
   login: validate([
-    commonValidations.requiredString("email"),
     body("email").isEmail().withMessage("Invalid email format"),
     commonValidations.requiredString("password"),
-    body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters"),
   ]),
+
+  refreshToken: validate([commonValidations.requiredString("refreshToken")]),
 
   createUser: validate([
     commonValidations.requiredString("name"),
-    commonValidations.requiredString("email"),
     body("email").isEmail().withMessage("Invalid email format"),
     commonValidations.requiredString("password"),
-    body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters"),
   ]),
 };
 

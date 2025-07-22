@@ -2,7 +2,7 @@
 
 **Last Updated**: December 2024  
 **Version**: 1.0  
-**Authentication**: JWT Bearer Token  
+**Authentication**: JWT Bearer Token (Access Token + Refresh Token)  
 **Soft Delete**: All delete operations use soft delete (isDeleted flag)  
 **User Tracking**: All modifications track created_by and updated_by user IDs
 
@@ -33,12 +33,37 @@ interface LoginRequest {
 interface LoginResponse {
   success: boolean;
   data: {
-    token: string;
+    accessToken: string;
+    refreshToken: string;
     user: {
       id: string;
       email: string;
       name: string;
     };
+  };
+  message: string;
+}
+```
+
+### Refresh Token
+
+**POST** `/auth/refresh`
+
+**Request:**
+
+```typescript
+interface RefreshTokenRequest {
+  refreshToken: string;
+}
+```
+
+**Response:**
+
+```typescript
+interface RefreshTokenResponse {
+  success: boolean;
+  data: {
+    accessToken: string;
   };
   message: string;
 }
@@ -79,7 +104,7 @@ interface AuthResponse {
 
 **GET** `/auth/me`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -102,7 +127,7 @@ interface AuthResponse {
 
 **GET** `/auth/users`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -129,7 +154,7 @@ interface AuthResponse {
 
 **GET** `/dashboard/stats`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -170,7 +195,7 @@ interface DashboardStatsResponse {
 
 **GET** `/dashboard/latest-orders`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -199,7 +224,7 @@ interface LatestOrdersResponse {
 
 **GET** `/customers`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -255,7 +280,7 @@ interface CustomersResponse {
 
 **GET** `/customers/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -298,7 +323,7 @@ interface CustomerDetailsResponse {
 
 **POST** `/customers`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -350,7 +375,7 @@ interface CreateCustomerResponse {
 
 **PUT** `/customers/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:** Same as CreateCustomerRequest
 
@@ -360,7 +385,7 @@ interface CreateCustomerResponse {
 
 **DELETE** `/customers/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -375,7 +400,7 @@ interface DeleteCustomerResponse {
 
 **PATCH** `/customers/:id/restore`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -390,7 +415,7 @@ interface RestoreCustomerResponse {
 
 **GET** `/customers/locations`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -418,7 +443,7 @@ interface LocationsResponse {
 
 **GET** `/orders`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -477,7 +502,7 @@ interface OrdersResponse {
 
 **GET** `/orders/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -530,7 +555,7 @@ interface OrderDetailsResponse {
 
 **POST** `/orders`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -589,7 +614,7 @@ interface CreateOrderResponse {
 
 **PATCH** `/orders/:id/status`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -623,7 +648,7 @@ interface UpdateOrderStatusResponse {
 
 **DELETE** `/orders/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -638,7 +663,7 @@ interface DeleteOrderResponse {
 
 **PATCH** `/orders/:id/restore`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -657,7 +682,7 @@ interface RestoreOrderResponse {
 
 **GET** `/products`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -721,7 +746,7 @@ interface ProductsResponse {
 
 **GET** `/products/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -762,7 +787,7 @@ interface ProductDetailsResponse {
 
 **POST** `/products`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -813,7 +838,7 @@ interface CreateProductResponse {
 
 **PUT** `/products/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:** Same as CreateProductRequest
 
@@ -823,7 +848,7 @@ interface CreateProductResponse {
 
 **DELETE** `/products/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -838,7 +863,7 @@ interface DeleteProductResponse {
 
 **PATCH** `/products/:id/restore`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -857,7 +882,7 @@ interface RestoreProductResponse {
 
 **GET** `/companies`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -879,7 +904,7 @@ interface CompaniesResponse {
 
 **POST** `/companies`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -908,7 +933,7 @@ interface CreateCompanyResponse {
 
 **DELETE** `/companies/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -923,7 +948,7 @@ interface DeleteCompanyResponse {
 
 **PATCH** `/companies/:id/restore`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -938,7 +963,7 @@ interface RestoreCompanyResponse {
 
 **GET** `/categories`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -960,7 +985,7 @@ interface CategoriesResponse {
 
 **POST** `/categories`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request:**
 
@@ -989,7 +1014,7 @@ interface CreateCategoryResponse {
 
 **DELETE** `/categories/:id`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -1004,7 +1029,7 @@ interface DeleteCategoryResponse {
 
 **PATCH** `/categories/:id/restore`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Response:**
 
@@ -1023,7 +1048,7 @@ interface RestoreCategoryResponse {
 
 **GET** `/analytics/sales`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -1067,7 +1092,7 @@ interface SalesAnalyticsResponse {
 
 **GET** `/analytics/customers`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -1104,7 +1129,7 @@ interface CustomerAnalyticsResponse {
 
 **GET** `/analytics/products`
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -1237,7 +1262,7 @@ Rate limit headers will be included in responses:
 ### 9.1 Authentication & Authorization
 
 - All API endpoints (except `/auth/login` and `/auth/register`) require JWT authentication
-- JWT tokens are sent via `Authorization: Bearer <token>` header
+- JWT tokens are sent via `Authorization: Bearer <access_token>` header
 - Token expiration is configurable (default: 24 hours)
 - User authentication is required for all data modifications
 
@@ -1332,3 +1357,170 @@ The system includes two sample users for testing:
 - `GET /analytics/products` - Get product analytics
 
 This API specification provides a complete foundation for your admin panel with all the necessary endpoints, proper typing, comprehensive error handling, pagination support, authentication, user tracking, and soft delete functionality.
+
+---
+
+## 11. CHANGELOG & IMPLEMENTATION NOTES
+
+### Version 1.0 - December 2024
+
+#### 🔐 Authentication Module Implementation
+
+- **Added**: JWT-based authentication with access and refresh tokens
+- **Added**: User registration and login endpoints
+- **Added**: Refresh token endpoint for token renewal
+- **Added**: User management endpoints (get current user, get all users)
+- **Added**: Password hashing using bcrypt
+- **Added**: Authentication middleware for protected routes
+- **Added**: Sample users for testing (admin@example.com/admin123, user@example.com/user123)
+
+#### 👥 User Tracking System
+
+- **Added**: `created_by` and `updated_by` fields to all relevant tables
+- **Added**: User tracking in all CRUD operations
+- **Added**: User names included in API responses for display
+- **Modified**: All service methods to accept and store user IDs
+- **Modified**: Database schema to include UUID foreign keys to users table
+
+#### 🗑️ Soft Delete Implementation
+
+- **Added**: `is_deleted` flag to all relevant tables
+- **Added**: Soft delete functionality for all resources
+- **Added**: Restore endpoints for all resources (`PATCH /:id/restore`)
+- **Modified**: All queries to filter out soft-deleted records
+- **Added**: Soft delete preserves data integrity and audit trails
+
+#### 🔄 Refresh Token System
+
+- **Added**: Separate access and refresh tokens
+- **Added**: Access token with shorter expiry (15 minutes default)
+- **Added**: Refresh token with longer expiry (7 days default)
+- **Added**: Token refresh endpoint (`POST /auth/refresh`)
+- **Modified**: Login response to include both access and refresh tokens
+- **Added**: Token verification and generation utilities
+
+#### 🛡️ Security Enhancements
+
+- **Added**: JWT secret configuration via environment variables
+- **Added**: Separate secrets for access and refresh tokens
+- **Added**: Configurable token expiration times
+- **Added**: Input validation and sanitization
+- **Added**: CORS and Helmet security middleware
+
+#### 📊 Database Schema Updates
+
+- **Modified**: Users table to use UUID primary keys
+- **Added**: User tracking foreign keys to all tables
+- **Added**: Soft delete flags to all tables
+- **Added**: Proper indexes for performance
+- **Added**: Database migrations for all schema changes
+
+#### 🔧 API Improvements
+
+- **Modified**: All endpoints now require authentication (except login/register)
+- **Added**: Comprehensive error handling with specific error types
+- **Added**: Input validation for all endpoints
+- **Added**: Pagination support for list endpoints
+- **Added**: Search and filtering capabilities
+- **Added**: Proper HTTP status codes and error messages
+
+#### 📝 Documentation Updates
+
+- **Updated**: API specification to reflect all changes
+- **Added**: Comprehensive type definitions in api-types.ts
+- **Added**: Postman collection for testing all APIs
+- **Added**: Implementation notes and changelog
+- **Updated**: All endpoint documentation with authentication requirements
+
+#### 🧪 Testing & Development
+
+- **Added**: Comprehensive Postman collection with automated token extraction
+- **Added**: Sample data seeding for testing
+- **Added**: Database migration and seeding scripts
+- **Added**: Development environment setup instructions
+
+### Technical Implementation Details
+
+#### Authentication Flow
+
+1. User logs in with email/password
+2. System validates credentials and generates access + refresh tokens
+3. Access token used for API requests (short-lived)
+4. Refresh token used to get new access token when expired
+5. All protected endpoints require valid access token
+
+#### User Tracking Flow
+
+1. All CRUD operations extract user ID from JWT token
+2. User ID stored in `created_by` for new resources
+3. User ID stored in `updated_by` for modifications
+4. User names fetched and included in API responses
+
+#### Soft Delete Flow
+
+1. DELETE operations set `is_deleted = true` instead of removing records
+2. All queries filter by `is_deleted = false`
+3. Restore operations set `is_deleted = false`
+4. Data integrity maintained for audit trails
+
+#### Database Migrations Applied
+
+1. `001_create_users_table.ts` - Users table with UUID primary keys
+2. `009_add_user_tracking_fields.ts` - User tracking fields
+3. `010_add_soft_delete_flags.ts` - Soft delete flags
+
+#### Environment Variables Required
+
+- `JWT_SECRET` - Secret for access tokens
+- `JWT_REFRESH_SECRET` - Secret for refresh tokens
+- `JWT_EXPIRES_IN` - Access token expiry (default: 15m)
+- `JWT_REFRESH_EXPIRES_IN` - Refresh token expiry (default: 7d)
+
+### Frontend Integration Notes
+
+#### Authentication Integration
+
+- Store both access and refresh tokens securely
+- Use access token for API requests
+- Implement automatic token refresh when access token expires
+- Handle 401 responses by attempting token refresh
+
+#### User Tracking Display
+
+- All API responses now include `createdBy` and `updatedBy` user names
+- Display user information in admin interface
+- Show audit trail for data modifications
+
+#### Soft Delete UI
+
+- Implement "soft delete" instead of permanent deletion
+- Add restore functionality in admin interface
+- Consider showing deleted items in a separate view
+
+#### Error Handling
+
+- Handle authentication errors (401, 403)
+- Handle validation errors (400)
+- Handle server errors (500)
+- Implement proper error messages and user feedback
+
+---
+
+## 12. RATE LIMITING (PLANNED)
+
+Rate limiting will be implemented with different limits for different endpoint types:
+
+- **Dashboard endpoints**: 100 requests per minute
+- **CRUD endpoints**: 200 requests per minute
+- **Analytics endpoints**: 50 requests per minute
+- **Authentication endpoints**: 10 requests per minute
+
+Rate limit headers will be included in responses:
+
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+---
+
+## 13. API ENDPOINT SUMMARY

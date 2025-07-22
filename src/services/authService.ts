@@ -1,48 +1,47 @@
 import db from "../db";
 import bcrypt from "bcrypt";
-import { generateToken } from "../middlewares/auth";
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
-
-export interface CreateUserRequest {
-  name: string;
-  email: string;
-  password: string;
-}
+import {
+  generateTokenPair,
+  generateAccessToken,
+  verifyRefreshToken,
+} from "../middlewares/auth";
+import {
+  LoginRequest,
+  LoginResponse,
+  CreateUserRequest,
+  User,
+} from "../../api-types";
 
 export class AuthService {
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    const user = await db("users").where("email", data.email).first();
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const { email, password } = credentials;
+
+    // Find user by email (only non-deleted users)
+    const user = await db("users")
+      .where("email", email)
+      .where("is_deleted", false)
+      .first();
 
     if (!user) {
       throw new Error("Invalid email or password");
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.password);
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       throw new Error("Invalid email or password");
     }
 
-    const token = generateToken({
+    // Generate token pair
+    const tokenPair = generateTokenPair({
       id: user.id,
       email: user.email,
       name: user.name,
     });
 
     return {
-      token,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -51,13 +50,41 @@ export class AuthService {
     };
   }
 
-  async createUser(data: CreateUserRequest): Promise<{
-    id: string;
-    email: string;
-    name: string;
-  }> {
+  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+    // Verify refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded) {
+      throw new Error("Invalid refresh token");
+    }
+
+    // Check if user still exists and is not deleted
+    const user = await db("users")
+      .where("id", decoded.id)
+      .where("is_deleted", false)
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Generate new access token
+    const accessToken = generateAccessToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    });
+
+    return { accessToken };
+  }
+
+  async createUser(userData: CreateUserRequest): Promise<User> {
+    const { name, email, password } = userData;
+
     // Check if user already exists
-    const existingUser = await db("users").where("email", data.email).first();
+    const existingUser = await db("users")
+      .where("email", email)
+      .where("is_deleted", false)
+      .first();
 
     if (existingUser) {
       throw new Error("User with this email already exists");
@@ -65,45 +92,56 @@ export class AuthService {
 
     // Hash password
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+    // Create user
     const [user] = await db("users")
       .insert({
-        name: data.name,
-        email: data.email,
+        name,
+        email,
         password: hashedPassword,
+        is_deleted: false,
       })
-      .returning(["id", "email", "name"]);
+      .returning("*");
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.created_at,
+    };
   }
 
-  async getUserById(id: string): Promise<{
-    id: string;
-    email: string;
-    name: string;
-  } | null> {
+  async getUserById(id: string): Promise<User | null> {
     const user = await db("users")
       .where("id", id)
-      .select("id", "email", "name")
+      .where("is_deleted", false)
       .first();
 
-    return user || null;
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.created_at,
+    };
   }
 
-  async getAllUsers(): Promise<
-    Array<{
-      id: string;
-      email: string;
-      name: string;
-      createdAt: string;
-    }>
-  > {
+  async getAllUsers(): Promise<User[]> {
     const users = await db("users")
-      .select("id", "email", "name", "created_at as createdAt")
+      .where("is_deleted", false)
+      .select("id", "email", "name", "created_at")
       .orderBy("created_at", "desc");
 
-    return users;
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.created_at,
+    }));
   }
 }
 

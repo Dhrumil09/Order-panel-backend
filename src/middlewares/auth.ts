@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { sendErrorResponse } from "../utils/response";
 
-// Extend Express Request interface to include user
 declare global {
   namespace Express {
     interface Request {
@@ -23,48 +22,77 @@ export interface JWTPayload {
   exp: number;
 }
 
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
 export function authenticateToken(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    sendErrorResponse(res, "Access token required", 401, {
-      type: "AUTHENTICATION_ERROR",
-      message: "Access token required",
-    });
+    sendErrorResponse(res, "Access token required", 401);
     return;
   }
 
-  try {
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    const decoded = jwt.verify(token, secret) as JWTPayload;
+  const secret = process.env.JWT_SECRET || "your-secret-key";
 
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      name: decoded.name,
-    };
+  jwt.verify(token, secret, (err: any, user: any) => {
+    if (err) {
+      sendErrorResponse(res, "Invalid or expired token", 403);
+      return;
+    }
 
+    req.user = user;
     next();
-  } catch (error) {
-    sendErrorResponse(res, "Invalid or expired token", 401, {
-      type: "AUTHENTICATION_ERROR",
-      message: "Invalid or expired token",
-    });
-  }
+  });
 }
 
-export function generateToken(
+export function generateTokenPair(
+  payload: Omit<JWTPayload, "iat" | "exp">
+): TokenPair {
+  const accessSecret = process.env.JWT_SECRET || "your-secret-key";
+  const refreshSecret =
+    process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
+
+  const accessOptions: SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN ||
+      "15m") as jwt.SignOptions["expiresIn"], // Shorter expiry for access token
+  };
+
+  const refreshOptions: SignOptions = {
+    expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ||
+      "7d") as jwt.SignOptions["expiresIn"], // Longer expiry for refresh token
+  };
+
+  const accessToken = jwt.sign(payload, accessSecret, accessOptions);
+  const refreshToken = jwt.sign(payload, refreshSecret, refreshOptions);
+
+  return { accessToken, refreshToken };
+}
+
+export function generateAccessToken(
   payload: Omit<JWTPayload, "iat" | "exp">
 ): string {
   const secret = process.env.JWT_SECRET || "your-secret-key";
   const options: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN || "24h") as string,
+    expiresIn: (process.env.JWT_EXPIRES_IN ||
+      "15m") as jwt.SignOptions["expiresIn"],
   };
 
   return jwt.sign(payload, secret, options);
+}
+
+export function verifyRefreshToken(refreshToken: string): JWTPayload | null {
+  try {
+    const secret = process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
+    return jwt.verify(refreshToken, secret) as JWTPayload;
+  } catch (error) {
+    return null;
+  }
 }

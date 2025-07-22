@@ -343,7 +343,7 @@ export interface DeleteProductResponse {
 }
 
 // ============================================================================
-// COMPANY TYPES
+// COMPANY & CATEGORY TYPES
 // ============================================================================
 
 export interface Company {
@@ -378,10 +378,6 @@ export interface DeleteCompanyResponse {
   success: boolean;
   message: string;
 }
-
-// ============================================================================
-// CATEGORY TYPES
-// ============================================================================
 
 export interface Category {
   id: string;
@@ -516,10 +512,6 @@ export interface PaginationInfo {
   hasPrevPage: boolean;
 }
 
-// ============================================================================
-// ERROR TYPES
-// ============================================================================
-
 export interface ValidationError {
   type: "VALIDATION_ERROR";
   message: string;
@@ -562,8 +554,73 @@ export interface ErrorResponse {
 }
 
 // ============================================================================
+// AUTHENTICATION TYPES
+// ============================================================================
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  data:
+    | LoginResponse
+    | RefreshTokenResponse
+    | { user: User }
+    | { users: User[] };
+  message: string;
+}
+
+export type ApiResponse<T> =
+  | { success: true; data: T; message: string }
+  | ErrorResponse;
+
+// ============================================================================
 // QUERY PARAMETER TYPES
 // ============================================================================
+
+export type StatusType = "active" | "inactive" | "pending";
+
+export type OrderStatusType =
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export type SortOrderType = "asc" | "desc";
 
 export interface CustomerQueryParams {
   page?: number;
@@ -609,89 +666,3 @@ export interface AnalyticsQueryParams {
   startDate?: string;
   endDate?: string;
 }
-
-// ============================================================================
-// AUTHENTICATION TYPES
-// ============================================================================
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
-
-export interface CreateUserRequest {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt?: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  data: LoginResponse | { user: User } | { users: User[] };
-  message: string;
-}
-
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
-
-export type ApiResponse<T> =
-  | { success: true; data: T; message: string }
-  | ErrorResponse;
-
-export type StatusType = "active" | "inactive" | "pending";
-export type OrderStatusType =
-  | "pending"
-  | "processing"
-  | "shipped"
-  | "delivered"
-  | "cancelled";
-export type SortOrderType = "asc" | "desc";
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-export const STATUS_COLORS = {
-  active: "bg-[#4BB543] text-white",
-  inactive: "bg-[#E74C3C] text-white",
-  pending: "bg-[#FFB946] text-white",
-} as const;
-
-export const ORDER_STATUS_COLORS = {
-  pending: "bg-[#FFB946] text-white",
-  processing: "bg-[#4D8BF5] text-white",
-  shipped: "bg-[#9869E0] text-white",
-  delivered: "bg-[#4BB543] text-white",
-  cancelled: "bg-[#E74C3C] text-white",
-} as const;
-
-export const STATUS_LABELS = {
-  active: "Active",
-  inactive: "Inactive",
-  pending: "Pending",
-} as const;
-
-export const ORDER_STATUS_LABELS = {
-  pending: "Pending",
-  processing: "Processing",
-  shipped: "Shipped",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-} as const;

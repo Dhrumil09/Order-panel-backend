@@ -53,6 +53,11 @@ export class CompanyController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Company ID is required", 400);
+        return;
+      }
+
       const deleted = await companyService.deleteCompany(id, req.user.id);
 
       if (!deleted) {
@@ -75,6 +80,11 @@ export class CompanyController {
       }
 
       const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Company ID is required", 400);
+        return;
+      }
+
       const restored = await companyService.restoreCompany(id, req.user.id);
 
       if (!restored) {

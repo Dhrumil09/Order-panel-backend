@@ -7,6 +7,11 @@ const router = Router();
 // Public routes (no authentication required)
 router.post("/login", authValidation.login, authController.login);
 router.post("/register", authValidation.createUser, authController.createUser);
+router.post(
+  "/refresh",
+  authValidation.refreshToken,
+  authController.refreshToken
+);
 
 // Protected routes (authentication required)
 router.get("/me", authenticateToken, authController.getCurrentUser);
