@@ -4,8 +4,8 @@ import {
   CreateProductRequest,
   ProductQueryParams,
   ProductWithRelations,
+  PaginationInfo,
 } from "../../api-types";
-import { PaginationInfo } from "../types";
 
 export class ProductService {
   async getAllProducts(params: ProductQueryParams): Promise<{
@@ -31,7 +31,10 @@ export class ProductService {
     let query = db("products as p")
       .select("p.*", "c.name as company_name", "cat.name as category_name")
       .leftJoin("companies as c", "p.company_id", "c.id")
-      .leftJoin("categories as cat", "p.category_id", "cat.id");
+      .leftJoin("categories as cat", "p.category_id", "cat.id")
+      .where("p.is_deleted", false) // Filter out soft-deleted records
+      .where("c.is_deleted", false) // Filter out soft-deleted companies
+      .where("cat.is_deleted", false); // Filter out soft-deleted categories
 
     // Apply search filter
     if (search) {
@@ -72,32 +75,44 @@ export class ProductService {
     }
 
     // Apply price filters
-    if (minPrice || maxPrice) {
-      const subQuery = db("product_variants")
-        .select(db.raw("MIN(mrp) as min_price, MAX(mrp) as max_price"))
-        .where("product_id", db.ref("p.id"));
+    if (minPrice !== undefined) {
+      query = query.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false) // Filter out soft-deleted variants
+          .where("pv.mrp", ">=", minPrice);
+      });
+    }
 
-      if (minPrice) {
-        query = query.whereExists(subQuery.where("min_price", ">=", minPrice));
-      }
-      if (maxPrice) {
-        query = query.whereExists(subQuery.where("max_price", "<=", maxPrice));
-      }
+    if (maxPrice !== undefined) {
+      query = query.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false) // Filter out soft-deleted variants
+          .where("pv.mrp", "<=", maxPrice);
+      });
     }
 
     // Apply size filter
     if (sizeFilter) {
-      query = query.whereExists(
-        db("product_variants")
-          .where("product_id", db.ref("p.id"))
-          .whereILike("name", `%${sizeFilter}%`)
-      );
+      query = query.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false) // Filter out soft-deleted variants
+          .whereILike("pv.name", `%${sizeFilter}%`);
+      });
     }
 
     // Get total count for pagination
     const countQuery = db("products as p")
       .leftJoin("companies as c", "p.company_id", "c.id")
-      .leftJoin("categories as cat", "p.category_id", "cat.id");
+      .leftJoin("categories as cat", "p.category_id", "cat.id")
+      .where("p.is_deleted", false) // Filter out soft-deleted records
+      .where("c.is_deleted", false) // Filter out soft-deleted companies
+      .where("cat.is_deleted", false); // Filter out soft-deleted categories
 
     // Apply the same filters to count query
     if (search) {
@@ -127,24 +142,32 @@ export class ProductService {
         countQuery.where("p.available_in_pack", true);
       }
     }
-    if (minPrice || maxPrice) {
-      const subQuery = db("product_variants")
-        .select(db.raw("MIN(mrp) as min_price, MAX(mrp) as max_price"))
-        .where("product_id", db.ref("p.id"));
-
-      if (minPrice) {
-        countQuery.whereExists(subQuery.where("min_price", ">=", minPrice));
-      }
-      if (maxPrice) {
-        countQuery.whereExists(subQuery.where("max_price", "<=", maxPrice));
-      }
+    if (minPrice !== undefined) {
+      countQuery.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false)
+          .where("pv.mrp", ">=", minPrice);
+      });
+    }
+    if (maxPrice !== undefined) {
+      countQuery.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false)
+          .where("pv.mrp", "<=", maxPrice);
+      });
     }
     if (sizeFilter) {
-      countQuery.whereExists(
-        db("product_variants")
-          .where("product_id", db.ref("p.id"))
-          .whereILike("name", `%${sizeFilter}%`)
-      );
+      countQuery.whereExists(function () {
+        this.select("*")
+          .from("product_variants as pv")
+          .whereRaw("pv.product_id = p.id")
+          .where("pv.is_deleted", false)
+          .whereILike("pv.name", `%${sizeFilter}%`);
+      });
     }
 
     const totalItems = await countQuery.count("* as count").first();
@@ -155,11 +178,12 @@ export class ProductService {
 
     const products = await query;
 
-    // Get variants for each product
+    // Get variants for each product (only non-deleted variants)
     const productsWithVariants = await Promise.all(
       products.map(async (product) => {
         const variants = await db("product_variants")
           .where("product_id", product.id)
+          .where("is_deleted", false) // Filter out soft-deleted variants
           .select("id", "name", "mrp")
           .orderBy("mrp");
 
@@ -168,10 +192,10 @@ export class ProductService {
           name: product.name,
           companyId: product.company_id,
           categoryId: product.category_id,
-          variants: variants.map((v) => ({
-            id: v.id,
-            name: v.name,
-            mrp: parseFloat(v.mrp),
+          variants: variants.map((variant) => ({
+            id: variant.id,
+            name: variant.name,
+            mrp: parseFloat(variant.mrp),
           })),
           isOutOfStock: product.is_out_of_stock,
           availableInPieces: product.available_in_pieces,
@@ -208,14 +232,19 @@ export class ProductService {
       .leftJoin("companies as c", "p.company_id", "c.id")
       .leftJoin("categories as cat", "p.category_id", "cat.id")
       .where("p.id", id)
+      .where("p.is_deleted", false) // Filter out soft-deleted records
+      .where("c.is_deleted", false) // Filter out soft-deleted companies
+      .where("cat.is_deleted", false) // Filter out soft-deleted categories
       .first();
 
     if (!product) {
       return null;
     }
 
+    // Get product variants (only non-deleted variants)
     const variants = await db("product_variants")
       .where("product_id", id)
+      .where("is_deleted", false) // Filter out soft-deleted variants
       .select("id", "name", "mrp")
       .orderBy("mrp");
 
@@ -224,10 +253,10 @@ export class ProductService {
       name: product.name,
       companyId: product.company_id,
       categoryId: product.category_id,
-      variants: variants.map((v) => ({
-        id: v.id,
-        name: v.name,
-        mrp: parseFloat(v.mrp),
+      variants: variants.map((variant) => ({
+        id: variant.id,
+        name: variant.name,
+        mrp: parseFloat(variant.mrp),
       })),
       isOutOfStock: product.is_out_of_stock,
       availableInPieces: product.available_in_pieces,
@@ -245,101 +274,163 @@ export class ProductService {
     };
   }
 
-  async createProduct(data: CreateProductRequest): Promise<Product> {
-    const { variants, ...productData } = data;
+  async createProduct(
+    data: CreateProductRequest,
+    userId: string
+  ): Promise<Product> {
+    return await db.transaction(async (trx) => {
+      // Create product
+      const [product] = await trx("products")
+        .insert({
+          name: data.name,
+          company_id: data.companyId,
+          category_id: data.categoryId,
+          is_out_of_stock: data.isOutOfStock,
+          available_in_pieces: data.availableInPieces,
+          available_in_pack: data.availableInPack,
+          pack_size: data.packSize,
+          created_by: userId,
+          updated_by: userId,
+          is_deleted: false,
+        })
+        .returning("*");
 
-    // Create product
-    const [product] = await db("products")
-      .insert({
-        name: productData.name,
-        company_id: productData.companyId,
-        category_id: productData.categoryId,
-        is_out_of_stock: productData.isOutOfStock,
-        available_in_pieces: productData.availableInPieces,
-        available_in_pack: productData.availableInPack,
-        pack_size: productData.packSize,
-      })
-      .returning("*");
+      // Create product variants
+      if (data.variants && data.variants.length > 0) {
+        const variantData = data.variants.map((variant) => ({
+          product_id: product.id,
+          name: variant.name,
+          mrp: variant.mrp,
+          created_by: userId,
+          updated_by: userId,
+          is_deleted: false,
+        }));
 
-    // Create variants
-    if (variants && variants.length > 0) {
-      const variantData = variants.map((variant) => ({
-        product_id: product.id,
-        name: variant.name,
-        mrp: variant.mrp,
-      }));
+        await trx("product_variants").insert(variantData);
+      }
 
-      await db("product_variants").insert(variantData);
-    }
-
-    return {
-      id: product.id,
-      name: product.name,
-      companyId: product.company_id,
-      categoryId: product.category_id,
-      variants: [], // Will be populated if needed
-      isOutOfStock: product.is_out_of_stock,
-      availableInPieces: product.available_in_pieces,
-      availableInPack: product.available_in_pack,
-      packSize: product.pack_size,
-      createdAt: product.created_at,
-    };
+      return {
+        id: product.id,
+        name: product.name,
+        companyId: product.company_id,
+        categoryId: product.category_id,
+        variants: [], // Will be populated if needed
+        isOutOfStock: product.is_out_of_stock,
+        availableInPieces: product.available_in_pieces,
+        availableInPack: product.available_in_pack,
+        packSize: product.pack_size,
+        createdAt: product.created_at,
+      };
+    });
   }
 
   async updateProduct(
     id: string,
-    data: CreateProductRequest
+    data: CreateProductRequest,
+    userId: string
   ): Promise<Product | null> {
-    const { variants, ...productData } = data;
+    return await db.transaction(async (trx) => {
+      // Update product
+      const [product] = await trx("products")
+        .where("id", id)
+        .where("is_deleted", false) // Only update non-deleted records
+        .update({
+          name: data.name,
+          company_id: data.companyId,
+          category_id: data.categoryId,
+          is_out_of_stock: data.isOutOfStock,
+          available_in_pieces: data.availableInPieces,
+          available_in_pack: data.availableInPack,
+          pack_size: data.packSize,
+          updated_by: userId,
+        })
+        .returning("*");
 
-    // Update product
-    const [product] = await db("products")
-      .where("id", id)
-      .update({
-        name: productData.name,
-        company_id: productData.companyId,
-        category_id: productData.categoryId,
-        is_out_of_stock: productData.isOutOfStock,
-        available_in_pieces: productData.availableInPieces,
-        available_in_pack: productData.availableInPack,
-        pack_size: productData.packSize,
-      })
-      .returning("*");
+      if (!product) {
+        return null;
+      }
 
-    if (!product) {
-      return null;
-    }
+      // Soft delete existing variants
+      await trx("product_variants").where("product_id", id).update({
+        is_deleted: true,
+        updated_by: userId,
+      });
 
-    // Update variants (delete existing and create new)
-    await db("product_variants").where("product_id", id).del();
+      // Create new variants
+      if (data.variants && data.variants.length > 0) {
+        const variantData = data.variants.map((variant) => ({
+          product_id: product.id,
+          name: variant.name,
+          mrp: variant.mrp,
+          created_by: userId,
+          updated_by: userId,
+          is_deleted: false,
+        }));
 
-    if (variants && variants.length > 0) {
-      const variantData = variants.map((variant) => ({
-        product_id: product.id,
-        name: variant.name,
-        mrp: variant.mrp,
-      }));
+        await trx("product_variants").insert(variantData);
+      }
 
-      await db("product_variants").insert(variantData);
-    }
-
-    return {
-      id: product.id,
-      name: product.name,
-      companyId: product.company_id,
-      categoryId: product.category_id,
-      variants: [], // Will be populated if needed
-      isOutOfStock: product.is_out_of_stock,
-      availableInPieces: product.available_in_pieces,
-      availableInPack: product.available_in_pack,
-      packSize: product.pack_size,
-      createdAt: product.created_at,
-    };
+      return {
+        id: product.id,
+        name: product.name,
+        companyId: product.company_id,
+        categoryId: product.category_id,
+        variants: [], // Will be populated if needed
+        isOutOfStock: product.is_out_of_stock,
+        availableInPieces: product.available_in_pieces,
+        availableInPack: product.available_in_pack,
+        packSize: product.pack_size,
+        createdAt: product.created_at,
+      };
+    });
   }
 
-  async deleteProduct(id: string): Promise<boolean> {
-    const deletedCount = await db("products").where("id", id).del();
-    return deletedCount > 0;
+  async deleteProduct(id: string, userId: string): Promise<boolean> {
+    return await db.transaction(async (trx) => {
+      // Soft delete product variants first
+      await trx("product_variants")
+        .where("product_id", id)
+        .where("is_deleted", false) // Only soft-delete non-deleted variants
+        .update({
+          is_deleted: true,
+          updated_by: userId,
+        });
+
+      // Soft delete product
+      const deletedCount = await trx("products")
+        .where("id", id)
+        .where("is_deleted", false) // Only soft-delete non-deleted records
+        .update({
+          is_deleted: true,
+          updated_by: userId,
+        });
+
+      return deletedCount > 0;
+    });
+  }
+
+  async restoreProduct(id: string, userId: string): Promise<boolean> {
+    return await db.transaction(async (trx) => {
+      // Restore product variants first
+      await trx("product_variants")
+        .where("product_id", id)
+        .where("is_deleted", true) // Only restore deleted variants
+        .update({
+          is_deleted: false,
+          updated_by: userId,
+        });
+
+      // Restore product
+      const restoredCount = await trx("products")
+        .where("id", id)
+        .where("is_deleted", true) // Only restore deleted records
+        .update({
+          is_deleted: false,
+          updated_by: userId,
+        });
+
+      return restoredCount > 0;
+    });
   }
 }
 

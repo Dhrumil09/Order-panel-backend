@@ -28,7 +28,8 @@ export class CustomerService {
     let query = db("customers as c")
       .select("c.*", "u1.name as created_by_name", "u2.name as updated_by_name")
       .leftJoin("users as u1", "c.created_by", "u1.id")
-      .leftJoin("users as u2", "c.updated_by", "u2.id");
+      .leftJoin("users as u2", "c.updated_by", "u2.id")
+      .where("c.is_deleted", false); // Filter out soft-deleted records
 
     // Apply search filter
     if (search) {
@@ -58,7 +59,7 @@ export class CustomerService {
     }
 
     // Get total count for pagination
-    const countQuery = db("customers");
+    const countQuery = db("customers").where("is_deleted", false); // Filter out soft-deleted records
 
     // Apply the same filters to count query
     if (search) {
@@ -130,15 +131,17 @@ export class CustomerService {
       .leftJoin("users as u1", "c.created_by", "u1.id")
       .leftJoin("users as u2", "c.updated_by", "u2.id")
       .where("c.id", id)
+      .where("c.is_deleted", false) // Filter out soft-deleted records
       .first();
 
     if (!customer) {
       return null;
     }
 
-    // Get customer's order history
+    // Get customer's order history (only non-deleted orders)
     const orders = await db("orders")
       .where("customer_id", id)
+      .where("is_deleted", false) // Filter out soft-deleted orders
       .select(
         "id",
         "order_date as date",
@@ -195,6 +198,7 @@ export class CustomerService {
         notes: data.notes,
         created_by: userId,
         updated_by: userId,
+        is_deleted: false,
       })
       .returning("*");
 
@@ -226,6 +230,7 @@ export class CustomerService {
   ): Promise<Customer | null> {
     const [customer] = await db("customers")
       .where("id", id)
+      .where("is_deleted", false) // Only update non-deleted records
       .update({
         shop_name: data.shopName,
         owner_name: data.ownerName,
@@ -267,9 +272,28 @@ export class CustomerService {
     };
   }
 
-  async deleteCustomer(id: string): Promise<boolean> {
-    const deletedCount = await db("customers").where("id", id).del();
+  async deleteCustomer(id: string, userId: string): Promise<boolean> {
+    // Soft delete - set is_deleted flag instead of removing record
+    const deletedCount = await db("customers")
+      .where("id", id)
+      .where("is_deleted", false) // Only soft-delete non-deleted records
+      .update({
+        is_deleted: true,
+        updated_by: userId,
+      });
     return deletedCount > 0;
+  }
+
+  async restoreCustomer(id: string, userId: string): Promise<boolean> {
+    // Restore soft-deleted customer
+    const restoredCount = await db("customers")
+      .where("id", id)
+      .where("is_deleted", true) // Only restore deleted records
+      .update({
+        is_deleted: false,
+        updated_by: userId,
+      });
+    return restoredCount > 0;
   }
 
   async getLocationData(): Promise<{
@@ -283,6 +307,7 @@ export class CustomerService {
   }> {
     const locations = await db("customers")
       .select("state", "city", "area")
+      .where("is_deleted", false) // Filter out soft-deleted records
       .distinct()
       .orderBy("state")
       .orderBy("city")

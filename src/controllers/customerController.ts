@@ -136,13 +136,18 @@ export class CustomerController {
 
   async deleteCustomer(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
       const { id } = req.params;
       if (!id) {
         sendErrorResponse(res, "Customer ID is required", 400);
         return;
       }
 
-      const deleted = await customerService.deleteCustomer(id);
+      const deleted = await customerService.deleteCustomer(id, req.user.id);
 
       if (!deleted) {
         sendErrorResponse(res, "Customer not found", 404);
@@ -153,6 +158,33 @@ export class CustomerController {
     } catch (error) {
       console.error("Error deleting customer:", error);
       sendErrorResponse(res, "Failed to delete customer", 500, error);
+    }
+  }
+
+  async restoreCustomer(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Customer ID is required", 400);
+        return;
+      }
+
+      const restored = await customerService.restoreCustomer(id, req.user.id);
+
+      if (!restored) {
+        sendErrorResponse(res, "Customer not found or already restored", 404);
+        return;
+      }
+
+      sendSuccessResponse(res, null, "Customer restored successfully");
+    } catch (error) {
+      console.error("Error restoring customer:", error);
+      sendErrorResponse(res, "Failed to restore customer", 500, error);
     }
   }
 

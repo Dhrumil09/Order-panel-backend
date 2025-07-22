@@ -22,7 +22,10 @@ router.patch(
   orderController.updateOrderStatus
 );
 
-// Delete order
+// Delete order (soft delete)
 router.delete("/:id", orderController.deleteOrder);
+
+// Restore order (undo soft delete)
+router.patch("/:id/restore", orderController.restoreOrder);
 
 export default router;

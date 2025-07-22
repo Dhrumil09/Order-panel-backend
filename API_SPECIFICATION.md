@@ -1,14 +1,124 @@
 # Admin Panel API Specification
 
+**Last Updated**: December 2024  
+**Version**: 1.0  
+**Authentication**: JWT Bearer Token  
+**Soft Delete**: All delete operations use soft delete (isDeleted flag)  
+**User Tracking**: All modifications track created_by and updated_by user IDs
+
 ## Base URL
+
 ```
-https://your-api-domain.com/api/v1
+http://localhost:3000/api/v1
 ```
 
 ## Authentication
-All API endpoints require authentication using Bearer token in the Authorization header:
+
+### Login
+
+**POST** `/auth/login`
+
+**Request:**
+
+```typescript
+interface LoginRequest {
+  email: string;
+  password: string;
+}
 ```
-Authorization: Bearer <token>
+
+**Response:**
+
+```typescript
+interface LoginResponse {
+  success: boolean;
+  data: {
+    token: string;
+    user: {
+      id: string;
+      email: string;
+      name: string;
+    };
+  };
+  message: string;
+}
+```
+
+### Register
+
+**POST** `/auth/register`
+
+**Request:**
+
+```typescript
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+```
+
+**Response:**
+
+```typescript
+interface AuthResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      createdAt: string;
+    };
+  };
+  message: string;
+}
+```
+
+### Get Current User
+
+**GET** `/auth/me`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```typescript
+interface AuthResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      createdAt: string;
+    };
+  };
+  message: string;
+}
+```
+
+### Get All Users
+
+**GET** `/auth/users`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```typescript
+interface AuthResponse {
+  success: boolean;
+  data: {
+    users: Array<{
+      id: string;
+      email: string;
+      name: string;
+      createdAt: string;
+    }>;
+  };
+  message: string;
+}
 ```
 
 ---
@@ -16,9 +126,13 @@ Authorization: Bearer <token>
 ## 1. DASHBOARD ENDPOINTS
 
 ### 1.1 Get Dashboard Stats
+
 **GET** `/dashboard/stats`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DashboardStatsResponse {
   success: boolean;
@@ -28,71 +142,38 @@ interface DashboardStatsResponse {
       today: number;
       thisWeek: number;
       thisMonth: number;
-      growth: number; // percentage
+      growth: number;
     };
     customers: {
       total: number;
       active: number;
       newThisMonth: number;
-      growth: number; // percentage
+      growth: number;
     };
     revenue: {
       total: number;
       thisMonth: number;
       thisWeek: number;
-      growth: number; // percentage
+      growth: number;
     };
     products: {
       total: number;
       outOfStock: number;
-      lowStock: number; // less than 10 items
+      lowStock: number;
     };
   };
   message: string;
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "orders": {
-      "total": 2315,
-      "today": 12,
-      "thisWeek": 89,
-      "thisMonth": 345,
-      "growth": 12.5
-    },
-    "customers": {
-      "total": 1235,
-      "active": 1189,
-      "newThisMonth": 45,
-      "growth": 15.2
-    },
-    "revenue": {
-      "total": 1250000,
-      "thisMonth": 89000,
-      "thisWeek": 25000,
-      "growth": 8.7
-    },
-    "products": {
-      "total": 567,
-      "outOfStock": 23,
-      "lowStock": 45
-    }
-  },
-  "message": "Dashboard stats retrieved successfully"
-}
-```
-
 ### 1.2 Get Latest Orders
-**GET** `/dashboard/latest-orders?limit=5`
 
-**Query Parameters:**
-- `limit` (optional): Number of orders to return (default: 5)
+**GET** `/dashboard/latest-orders`
+
+**Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```typescript
 interface LatestOrdersResponse {
   success: boolean;
@@ -100,7 +181,7 @@ interface LatestOrdersResponse {
     orders: Array<{
       id: string;
       customerName: string;
-      status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+      status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
       total: number;
       date: string;
       items: number;
@@ -110,58 +191,30 @@ interface LatestOrdersResponse {
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "orders": [
-      {
-        "id": "#12345",
-        "customerName": "Owen Turner",
-        "status": "shipped",
-        "total": 120.00,
-        "date": "2023-08-15",
-        "items": 3
-      },
-      {
-        "id": "#12346",
-        "customerName": "Sophia Mitchell",
-        "status": "processing",
-        "total": 85.50,
-        "date": "2023-08-14",
-        "items": 2
-      }
-    ]
-  },
-  "message": "Latest orders retrieved successfully"
-}
-```
-
 ---
 
 ## 2. CUSTOMER ENDPOINTS
 
 ### 2.1 Get All Customers (with Pagination, Search, Filters)
+
 **GET** `/customers`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10, max: 100)
-- `search` (optional): Search term (searches shopName, ownerName, ownerPhone, area, city)
-- `status` (optional): Filter by status (active, inactive, pending) - can be multiple
-- `area` (optional): Filter by area - can be multiple
-- `city` (optional): Filter by city - can be multiple
-- `state` (optional): Filter by state - can be multiple
+- `search` (optional): Search term (searches shop name, owner name, phone, area, city)
+- `status` (optional): Filter by status (active, inactive, pending)
+- `area` (optional): Filter by area
+- `city` (optional): Filter by city
+- `state` (optional): Filter by state
 - `sortBy` (optional): Sort field (shopName, ownerName, registrationDate, totalOrders)
-- `sortOrder` (optional): Sort order (asc, desc)
-
-**Example Request:**
-```
-GET /customers?page=1&limit=10&search=electronics&status=active&area=Koramangala&sortBy=registrationDate&sortOrder=desc
-```
+- `sortOrder` (optional): Sort direction (asc, desc)
 
 **Response:**
+
 ```typescript
 interface CustomersResponse {
   success: boolean;
@@ -177,11 +230,13 @@ interface CustomersResponse {
       city: string;
       state: string;
       pincode: string;
-      status: 'active' | 'inactive' | 'pending';
+      status: "active" | "inactive" | "pending";
       registrationDate: string;
       totalOrders: number;
       totalSpent: number;
       notes?: string;
+      createdBy?: string; // Name of user who created
+      updatedBy?: string; // Name of user who last updated
     }>;
     pagination: {
       currentPage: number;
@@ -196,47 +251,14 @@ interface CustomersResponse {
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "customers": [
-      {
-        "id": "#CUST001",
-        "shopName": "Kumar Electronics",
-        "ownerName": "Rajesh Kumar",
-        "ownerPhone": "+91 98765 43210",
-        "ownerEmail": "rajesh.kumar@gmail.com",
-        "address": "123 MG Road, Koramangala",
-        "area": "Koramangala",
-        "city": "Bangalore",
-        "state": "Karnataka",
-        "pincode": "560034",
-        "status": "active",
-        "registrationDate": "2024-01-15",
-        "totalOrders": 45,
-        "totalSpent": 125000,
-        "notes": "Premium customer, prefers express delivery"
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 50,
-      "itemsPerPage": 10,
-      "hasNextPage": true,
-      "hasPrevPage": false
-    }
-  },
-  "message": "Customers retrieved successfully"
-}
-```
+### 2.2 Get Customer Details with Order History
 
-### 2.2 Get Customer by ID (with Order History)
 **GET** `/customers/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface CustomerDetailsResponse {
   success: boolean;
@@ -252,11 +274,13 @@ interface CustomerDetailsResponse {
       city: string;
       state: string;
       pincode: string;
-      status: 'active' | 'inactive' | 'pending';
+      status: "active" | "inactive" | "pending";
       registrationDate: string;
       totalOrders: number;
       totalSpent: number;
       notes?: string;
+      createdBy?: string; // Name of user who created
+      updatedBy?: string; // Name of user who last updated
       orders: Array<{
         id: string;
         date: string;
@@ -270,10 +294,14 @@ interface CustomerDetailsResponse {
 }
 ```
 
-### 2.3 Create Customer
+### 2.3 Create New Customer
+
 **POST** `/customers`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface CreateCustomerRequest {
   shopName: string;
@@ -285,12 +313,13 @@ interface CreateCustomerRequest {
   city: string;
   state: string;
   pincode: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: "active" | "inactive" | "pending";
   notes?: string;
 }
 ```
 
 **Response:**
+
 ```typescript
 interface CreateCustomerResponse {
   success: boolean;
@@ -306,7 +335,7 @@ interface CreateCustomerResponse {
       city: string;
       state: string;
       pincode: string;
-      status: 'active' | 'inactive' | 'pending';
+      status: "active" | "inactive" | "pending";
       registrationDate: string;
       totalOrders: number;
       totalSpent: number;
@@ -318,16 +347,23 @@ interface CreateCustomerResponse {
 ```
 
 ### 2.4 Update Customer
+
 **PUT** `/customers/:id`
+
+**Headers:** `Authorization: Bearer <token>`
 
 **Request:** Same as CreateCustomerRequest
 
 **Response:** Same as CreateCustomerResponse
 
-### 2.5 Delete Customer
+### 2.5 Delete Customer (Soft Delete)
+
 **DELETE** `/customers/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DeleteCustomerResponse {
   success: boolean;
@@ -335,10 +371,29 @@ interface DeleteCustomerResponse {
 }
 ```
 
-### 2.6 Get Location Data (for Filters)
-**GET** `/customers/locations`
+### 2.6 Restore Customer (Undo Soft Delete)
+
+**PATCH** `/customers/:id/restore`
+
+**Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
+```typescript
+interface RestoreCustomerResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### 2.7 Get Location Data for Filters
+
+**GET** `/customers/locations`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
 ```typescript
 interface LocationsResponse {
   success: boolean;
@@ -355,60 +410,30 @@ interface LocationsResponse {
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "states": [
-      {
-        "name": "Karnataka",
-        "cities": [
-          {
-            "name": "Bangalore",
-            "areas": ["Koramangala", "Indiranagar", "Whitefield"]
-          }
-        ]
-      },
-      {
-        "name": "Maharashtra",
-        "cities": [
-          {
-            "name": "Mumbai",
-            "areas": ["Andheri West", "Juhu", "Bandra"]
-          }
-        ]
-      }
-    ]
-  },
-  "message": "Location data retrieved successfully"
-}
-```
-
 ---
 
 ## 3. ORDER ENDPOINTS
 
 ### 3.1 Get All Orders (with Pagination, Search, Filters)
+
 **GET** `/orders`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10, max: 100)
-- `search` (optional): Search term (searches customerName, customerAddress, orderId)
-- `status` (optional): Filter by status (pending, processing, shipped, delivered, cancelled) - can be multiple
+- `search` (optional): Search term (searches customer name, address, order ID)
+- `status` (optional): Filter by status (pending, processing, shipped, delivered, cancelled)
 - `dateFilter` (optional): Date filter (today, yesterday, last7days, last30days, custom)
-- `startDate` (optional): Custom start date (YYYY-MM-DD) - required if dateFilter=custom
-- `endDate` (optional): Custom end date (YYYY-MM-DD) - required if dateFilter=custom
+- `startDate` (optional): Start date for custom filter (YYYY-MM-DD)
+- `endDate` (optional): End date for custom filter (YYYY-MM-DD)
 - `sortBy` (optional): Sort field (customerName, date, status)
-- `sortOrder` (optional): Sort order (asc, desc)
-
-**Example Request:**
-```
-GET /orders?page=1&limit=10&search=electronics&status=shipped&dateFilter=last7days&sortBy=date&sortOrder=desc
-```
+- `sortOrder` (optional): Sort direction (asc, desc)
 
 **Response:**
+
 ```typescript
 interface OrdersResponse {
   success: boolean;
@@ -417,12 +442,12 @@ interface OrdersResponse {
       id: string;
       customerName: string;
       customerAddress: string;
-      status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+      status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
       date: string;
       items: number;
       customerEmail?: string;
       customerPhone?: string;
-      orderItems?: Array<{
+      orderItems: Array<{
         id: string;
         name: string;
         quantity: number;
@@ -432,6 +457,8 @@ interface OrdersResponse {
       trackingNumber?: string;
       notes?: string;
       total: number;
+      createdBy?: string; // Name of user who created
+      updatedBy?: string; // Name of user who last updated
     }>;
     pagination: {
       currentPage: number;
@@ -446,58 +473,14 @@ interface OrdersResponse {
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "orders": [
-      {
-        "id": "#ORD001",
-        "customerName": "Rajesh Kumar",
-        "customerAddress": "123 MG Road, Koramangala, Bangalore, Karnataka 560034",
-        "status": "shipped",
-        "date": "2024-01-15",
-        "items": 3,
-        "customerEmail": "rajesh.kumar@gmail.com",
-        "customerPhone": "+91 98765 43210",
-        "orderItems": [
-          {
-            "id": "1",
-            "name": "Wireless Headphones",
-            "quantity": 1,
-            "price": 120.00
-          },
-          {
-            "id": "2",
-            "name": "Phone Case",
-            "quantity": 2,
-            "price": 25.00
-          }
-        ],
-        "shippingMethod": "Express Delivery",
-        "trackingNumber": "DTDC123456789",
-        "notes": "Customer requested signature confirmation",
-        "total": 170.00
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 8,
-      "totalItems": 75,
-      "itemsPerPage": 10,
-      "hasNextPage": true,
-      "hasPrevPage": false
-    }
-  },
-  "message": "Orders retrieved successfully"
-}
-```
+### 3.2 Get Order Details with Customer Info
 
-### 3.2 Get Order by ID (with Customer Details)
 **GET** `/orders/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface OrderDetailsResponse {
   success: boolean;
@@ -506,7 +489,7 @@ interface OrderDetailsResponse {
       id: string;
       customerName: string;
       customerAddress: string;
-      status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+      status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
       date: string;
       items: number;
       customerEmail?: string;
@@ -516,7 +499,7 @@ interface OrderDetailsResponse {
         name: string;
         quantity: number;
         price: number;
-        productId: string;
+        productId?: string;
         boxes?: number;
         pieces?: number;
         pack?: number;
@@ -528,6 +511,8 @@ interface OrderDetailsResponse {
       trackingNumber?: string;
       notes?: string;
       total: number;
+      createdBy?: string; // Name of user who created
+      updatedBy?: string; // Name of user who last updated
       customer: {
         id: string;
         shopName: string;
@@ -541,10 +526,14 @@ interface OrderDetailsResponse {
 }
 ```
 
-### 3.3 Create Order
+### 3.3 Create New Order
+
 **POST** `/orders`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface CreateOrderRequest {
   customerId: string;
@@ -552,7 +541,7 @@ interface CreateOrderRequest {
   customerAddress: string;
   customerEmail: string;
   customerPhone: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   orderItems: Array<{
     productId: string;
     quantity: number;
@@ -566,6 +555,7 @@ interface CreateOrderRequest {
 ```
 
 **Response:**
+
 ```typescript
 interface CreateOrderResponse {
   success: boolean;
@@ -574,7 +564,7 @@ interface CreateOrderResponse {
       id: string;
       customerName: string;
       customerAddress: string;
-      status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+      status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
       date: string;
       items: number;
       customerEmail?: string;
@@ -596,18 +586,23 @@ interface CreateOrderResponse {
 ```
 
 ### 3.4 Update Order Status
+
 **PATCH** `/orders/:id/status`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface UpdateOrderStatusRequest {
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   trackingNumber?: string;
   notes?: string;
 }
 ```
 
 **Response:**
+
 ```typescript
 interface UpdateOrderStatusResponse {
   success: boolean;
@@ -624,12 +619,31 @@ interface UpdateOrderStatusResponse {
 }
 ```
 
-### 3.5 Delete Order
+### 3.5 Delete Order (Soft Delete)
+
 **DELETE** `/orders/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DeleteOrderResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### 3.6 Restore Order (Undo Soft Delete)
+
+**PATCH** `/orders/:id/restore`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```typescript
+interface RestoreOrderResponse {
   success: boolean;
   message: string;
 }
@@ -640,9 +654,13 @@ interface DeleteOrderResponse {
 ## 4. PRODUCT ENDPOINTS
 
 ### 4.1 Get All Products (with Pagination, Search, Filters)
+
 **GET** `/products`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10, max: 100)
 - `search` (optional): Search term (searches product name, company name, category name)
@@ -652,16 +670,12 @@ interface DeleteOrderResponse {
 - `availability` (optional): Filter by availability (pieces, pack, both)
 - `minPrice` (optional): Minimum price filter
 - `maxPrice` (optional): Maximum price filter
-- `sizeFilter` (optional): Size contains text
+- `sizeFilter` (optional): Filter by variant size/name
 - `sortBy` (optional): Sort field (name, createdAt, price)
-- `sortOrder` (optional): Sort order (asc, desc)
-
-**Example Request:**
-```
-GET /products?page=1&limit=10&search=coffee&companyId=1&stockStatus=in-stock&minPrice=100&maxPrice=500&sortBy=name&sortOrder=asc
-```
+- `sortOrder` (optional): Sort direction (asc, desc)
 
 **Response:**
+
 ```typescript
 interface ProductsResponse {
   success: boolean;
@@ -703,61 +717,14 @@ interface ProductsResponse {
 }
 ```
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "products": [
-      {
-        "id": "1",
-        "name": "Premium Coffee Beans",
-        "companyId": "1",
-        "categoryId": "1",
-        "variants": [
-          {
-            "id": "1",
-            "name": "250g",
-            "mrp": 299
-          },
-          {
-            "id": "2",
-            "name": "500g",
-            "mrp": 499
-          }
-        ],
-        "isOutOfStock": false,
-        "availableInPieces": true,
-        "availableInPack": true,
-        "packSize": 12,
-        "createdAt": "2024-01-15T10:30:00Z",
-        "company": {
-          "id": "1",
-          "name": "Coffee Co."
-        },
-        "category": {
-          "id": "1",
-          "name": "Beverages"
-        }
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 3,
-      "totalItems": 25,
-      "itemsPerPage": 10,
-      "hasNextPage": true,
-      "hasPrevPage": false
-    }
-  },
-  "message": "Products retrieved successfully"
-}
-```
+### 4.2 Get Product Details
 
-### 4.2 Get Product by ID
 **GET** `/products/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface ProductDetailsResponse {
   success: boolean;
@@ -791,10 +758,14 @@ interface ProductDetailsResponse {
 }
 ```
 
-### 4.3 Create Product
+### 4.3 Create New Product
+
 **POST** `/products`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface CreateProductRequest {
   name: string;
@@ -812,6 +783,7 @@ interface CreateProductRequest {
 ```
 
 **Response:**
+
 ```typescript
 interface CreateProductResponse {
   success: boolean;
@@ -838,18 +810,40 @@ interface CreateProductResponse {
 ```
 
 ### 4.4 Update Product
+
 **PUT** `/products/:id`
+
+**Headers:** `Authorization: Bearer <token>`
 
 **Request:** Same as CreateProductRequest
 
 **Response:** Same as CreateProductResponse
 
-### 4.5 Delete Product
+### 4.5 Delete Product (Soft Delete)
+
 **DELETE** `/products/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DeleteProductResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### 4.6 Restore Product (Undo Soft Delete)
+
+**PATCH** `/products/:id/restore`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```typescript
+interface RestoreProductResponse {
   success: boolean;
   message: string;
 }
@@ -860,9 +854,13 @@ interface DeleteProductResponse {
 ## 5. COMPANY & CATEGORY ENDPOINTS
 
 ### 5.1 Get All Companies
+
 **GET** `/companies`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface CompaniesResponse {
   success: boolean;
@@ -878,9 +876,13 @@ interface CompaniesResponse {
 ```
 
 ### 5.2 Create Company
+
 **POST** `/companies`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface CreateCompanyRequest {
   name: string;
@@ -888,6 +890,7 @@ interface CreateCompanyRequest {
 ```
 
 **Response:**
+
 ```typescript
 interface CreateCompanyResponse {
   success: boolean;
@@ -901,10 +904,14 @@ interface CreateCompanyResponse {
 }
 ```
 
-### 5.3 Delete Company
+### 5.3 Delete Company (Soft Delete)
+
 **DELETE** `/companies/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DeleteCompanyResponse {
   success: boolean;
@@ -912,10 +919,29 @@ interface DeleteCompanyResponse {
 }
 ```
 
-### 5.4 Get All Categories
-**GET** `/categories`
+### 5.4 Restore Company (Undo Soft Delete)
+
+**PATCH** `/companies/:id/restore`
+
+**Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
+```typescript
+interface RestoreCompanyResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### 5.5 Get All Categories
+
+**GET** `/categories`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
 ```typescript
 interface CategoriesResponse {
   success: boolean;
@@ -930,10 +956,14 @@ interface CategoriesResponse {
 }
 ```
 
-### 5.5 Create Category
+### 5.6 Create Category
+
 **POST** `/categories`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Request:**
+
 ```typescript
 interface CreateCategoryRequest {
   name: string;
@@ -941,6 +971,7 @@ interface CreateCategoryRequest {
 ```
 
 **Response:**
+
 ```typescript
 interface CreateCategoryResponse {
   success: boolean;
@@ -954,12 +985,31 @@ interface CreateCategoryResponse {
 }
 ```
 
-### 5.6 Delete Category
+### 5.7 Delete Category (Soft Delete)
+
 **DELETE** `/categories/:id`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Response:**
+
 ```typescript
 interface DeleteCategoryResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### 5.8 Restore Category (Undo Soft Delete)
+
+**PATCH** `/categories/:id/restore`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```typescript
+interface RestoreCategoryResponse {
   success: boolean;
   message: string;
 }
@@ -970,14 +1020,19 @@ interface DeleteCategoryResponse {
 ## 6. ANALYTICS ENDPOINTS
 
 ### 6.1 Get Sales Analytics
+
 **GET** `/analytics/sales`
 
+**Headers:** `Authorization: Bearer <token>`
+
 **Query Parameters:**
-- `period` (optional): Period for analytics (day, week, month, year)
-- `startDate` (optional): Start date (YYYY-MM-DD)
-- `endDate` (optional): End date (YYYY-MM-DD)
+
+- `period` (optional): Time period (day, week, month, year)
+- `startDate` (optional): Start date for custom period (YYYY-MM-DD)
+- `endDate` (optional): End date for custom period (YYYY-MM-DD)
 
 **Response:**
+
 ```typescript
 interface SalesAnalyticsResponse {
   success: boolean;
@@ -1009,9 +1064,19 @@ interface SalesAnalyticsResponse {
 ```
 
 ### 6.2 Get Customer Analytics
+
 **GET** `/analytics/customers`
 
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+
+- `period` (optional): Time period (day, week, month, year)
+- `startDate` (optional): Start date for custom period (YYYY-MM-DD)
+- `endDate` (optional): End date for custom period (YYYY-MM-DD)
+
 **Response:**
+
 ```typescript
 interface CustomerAnalyticsResponse {
   success: boolean;
@@ -1036,9 +1101,19 @@ interface CustomerAnalyticsResponse {
 ```
 
 ### 6.3 Get Product Analytics
+
 **GET** `/analytics/products`
 
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+
+- `period` (optional): Time period (day, week, month, year)
+- `startDate` (optional): Start date for custom period (YYYY-MM-DD)
+- `endDate` (optional): End date for custom period (YYYY-MM-DD)
+
 **Response:**
+
 ```typescript
 interface ProductAnalyticsResponse {
   success: boolean;
@@ -1073,14 +1148,15 @@ interface ProductAnalyticsResponse {
 
 ## 7. ERROR RESPONSES
 
-All endpoints may return the following error responses:
+All endpoints can return the following error responses:
 
 ### 7.1 Validation Error (400)
+
 ```typescript
-interface ValidationErrorResponse {
+interface ValidationError {
   success: false;
   error: {
-    type: 'VALIDATION_ERROR';
+    type: "VALIDATION_ERROR";
     message: string;
     details: Array<{
       field: string;
@@ -1090,66 +1166,49 @@ interface ValidationErrorResponse {
 }
 ```
 
-**Example:**
-```json
-{
-  "success": false,
-  "error": {
-    "type": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "details": [
-      {
-        "field": "shopName",
-        "message": "Shop name is required"
-      },
-      {
-        "field": "ownerEmail",
-        "message": "Invalid email format"
-      }
-    ]
-  }
-}
-```
-
 ### 7.2 Authentication Error (401)
+
 ```typescript
-interface AuthenticationErrorResponse {
+interface AuthenticationError {
   success: false;
   error: {
-    type: 'AUTHENTICATION_ERROR';
+    type: "AUTHENTICATION_ERROR";
     message: string;
   };
 }
 ```
 
 ### 7.3 Authorization Error (403)
+
 ```typescript
-interface AuthorizationErrorResponse {
+interface AuthorizationError {
   success: false;
   error: {
-    type: 'AUTHORIZATION_ERROR';
+    type: "AUTHORIZATION_ERROR";
     message: string;
   };
 }
 ```
 
 ### 7.4 Not Found Error (404)
+
 ```typescript
-interface NotFoundErrorResponse {
+interface NotFoundError {
   success: false;
   error: {
-    type: 'NOT_FOUND';
+    type: "NOT_FOUND";
     message: string;
   };
 }
 ```
 
 ### 7.5 Server Error (500)
+
 ```typescript
-interface ServerErrorResponse {
+interface ServerError {
   success: false;
   error: {
-    type: 'SERVER_ERROR';
+    type: "SERVER_ERROR";
     message: string;
   };
 }
@@ -1157,135 +1216,119 @@ interface ServerErrorResponse {
 
 ---
 
-## 8. PAGINATION
+## 8. RATE LIMITING
 
-All list endpoints support pagination with the following query parameters:
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 10, max: 100)
+**Note**: Rate limiting is planned but not yet implemented.
 
-Pagination response structure:
-```typescript
-interface PaginationInfo {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  itemsPerPage: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
-```
+- **Dashboard endpoints**: 100 requests per minute
+- **CRUD endpoints**: 200 requests per minute
+- **Analytics endpoints**: 50 requests per minute
+
+Rate limit headers will be included in responses:
+
+- `X-RateLimit-Limit`: Maximum requests per window
+- `X-RateLimit-Remaining`: Remaining requests in current window
+- `X-RateLimit-Reset`: Time when the rate limit resets (Unix timestamp)
 
 ---
 
-## 9. SEARCH AND FILTERING
+## 9. IMPLEMENTATION NOTES
 
-Most list endpoints support:
-- **Text search**: Searches across relevant text fields
-- **Status filtering**: Filter by status values (can be multiple)
-- **Date filtering**: Filter by date ranges
-- **Sorting**: Sort by various fields in ascending/descending order
+### 9.1 Authentication & Authorization
 
-**Example search queries:**
+- All API endpoints (except `/auth/login` and `/auth/register`) require JWT authentication
+- JWT tokens are sent via `Authorization: Bearer <token>` header
+- Token expiration is configurable (default: 24 hours)
+- User authentication is required for all data modifications
 
-Customers:
-```
-GET /customers?search=electronics&status=active&area=Koramangala&sortBy=registrationDate&sortOrder=desc&page=1&limit=10
-```
+### 9.2 User Tracking
 
-Orders:
-```
-GET /orders?search=rajesh&status=shipped&dateFilter=last7days&sortBy=date&sortOrder=desc&page=1&limit=10
-```
+- All resources (customers, orders, products, companies, categories) track:
+  - `created_by`: UUID of user who created the resource
+  - `updated_by`: UUID of user who last modified the resource
+  - `created_at`: Timestamp when resource was created
+  - `updated_at`: Timestamp when resource was last modified
+- User names are included in API responses for display purposes
 
-Products:
-```
-GET /products?search=coffee&companyId=1&stockStatus=in-stock&minPrice=100&maxPrice=500&sortBy=name&sortOrder=asc&page=1&limit=10
-```
+### 9.3 Soft Delete Implementation
 
----
+- All delete operations use soft delete (set `is_deleted = true`)
+- Soft-deleted records are filtered out from all queries
+- Restore endpoints are available to undo soft deletes
+- Soft delete preserves data integrity and audit trails
 
-## 10. RATE LIMITING
+### 9.4 Database Transactions
 
-- **Dashboard endpoints**: 60 requests per minute
-- **CRUD endpoints**: 100 requests per minute
-- **Analytics endpoints**: 30 requests per minute
+- Order creation uses database transactions for data consistency
+- Product updates use transactions when updating variants
+- Soft delete operations use transactions where needed
 
-Rate limit headers:
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1640995200
-```
+### 9.5 Sample Users
+
+The system includes two sample users for testing:
+
+- **Admin User**: `admin@example.com` / `admin123`
+- **Regular User**: `user@example.com` / `user123`
 
 ---
 
-## 11. ENVIRONMENT VARIABLES
+## 10. API ENDPOINT SUMMARY
 
-Required environment variables for the API:
-```env
-# Server
-PORT=3000
-NODE_ENV=development
+### Authentication
 
-# Firebase
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_PRIVATE_KEY=your-private-key
-FIREBASE_CLIENT_EMAIL=your-client-email
-
-# JWT
-JWT_SECRET=your-jwt-secret
-JWT_EXPIRES_IN=24h
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# CORS
-CORS_ORIGIN=http://localhost:3000,https://your-frontend-domain.com
-```
-
----
-
-## 12. SUMMARY OF ENDPOINTS
+- `POST /auth/login` - User login
+- `POST /auth/register` - User registration
+- `GET /auth/me` - Get current user
+- `GET /auth/users` - Get all users
 
 ### Dashboard
+
 - `GET /dashboard/stats` - Get dashboard statistics
 - `GET /dashboard/latest-orders` - Get latest orders
 
 ### Customers
+
 - `GET /customers` - Get all customers (with pagination, search, filters)
 - `GET /customers/:id` - Get customer details with order history
 - `POST /customers` - Create new customer
 - `PUT /customers/:id` - Update customer
-- `DELETE /customers/:id` - Delete customer
+- `DELETE /customers/:id` - Delete customer (soft delete)
+- `PATCH /customers/:id/restore` - Restore customer (undo soft delete)
 - `GET /customers/locations` - Get location data for filters
 
 ### Orders
+
 - `GET /orders` - Get all orders (with pagination, search, filters)
 - `GET /orders/:id` - Get order details with customer info
 - `POST /orders` - Create new order
 - `PATCH /orders/:id/status` - Update order status
-- `DELETE /orders/:id` - Delete order
+- `DELETE /orders/:id` - Delete order (soft delete)
+- `PATCH /orders/:id/restore` - Restore order (undo soft delete)
 
 ### Products
+
 - `GET /products` - Get all products (with pagination, search, filters)
 - `GET /products/:id` - Get product details
 - `POST /products` - Create new product
 - `PUT /products/:id` - Update product
-- `DELETE /products/:id` - Delete product
+- `DELETE /products/:id` - Delete product (soft delete)
+- `PATCH /products/:id/restore` - Restore product (undo soft delete)
 
 ### Companies & Categories
+
 - `GET /companies` - Get all companies
 - `POST /companies` - Create company
-- `DELETE /companies/:id` - Delete company
+- `DELETE /companies/:id` - Delete company (soft delete)
+- `PATCH /companies/:id/restore` - Restore company (undo soft delete)
 - `GET /categories` - Get all categories
 - `POST /categories` - Create category
-- `DELETE /categories/:id` - Delete category
+- `DELETE /categories/:id` - Delete category (soft delete)
+- `PATCH /categories/:id/restore` - Restore category (undo soft delete)
 
 ### Analytics
+
 - `GET /analytics/sales` - Get sales analytics
 - `GET /analytics/customers` - Get customer analytics
 - `GET /analytics/products` - Get product analytics
 
-This API specification provides a complete foundation for your admin panel with all the necessary endpoints, proper typing, comprehensive error handling, and pagination support. 
+This API specification provides a complete foundation for your admin panel with all the necessary endpoints, proper typing, comprehensive error handling, pagination support, authentication, user tracking, and soft delete functionality.

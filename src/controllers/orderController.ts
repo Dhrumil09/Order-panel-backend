@@ -69,17 +69,11 @@ export class OrderController {
 
       const order = await orderService.createOrder(req.body, req.user.id);
       sendSuccessResponse(res, { order }, "Order created successfully", 201);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating order:", error);
 
-      if (error.message?.includes("Product or variant not found")) {
+      if (error.message.includes("Product or variant not found")) {
         sendErrorResponse(res, error.message, 400);
-        return;
-      }
-
-      if (error.code === "23503") {
-        // Foreign key constraint violation
-        sendErrorResponse(res, "Invalid customer ID", 400);
         return;
       }
 
@@ -97,7 +91,7 @@ export class OrderController {
       const { id } = req.params;
       const { status, trackingNumber, notes } = req.body;
 
-      const order = await orderService.updateOrderStatus(
+      const updatedOrder = await orderService.updateOrderStatus(
         id,
         status,
         req.user.id,
@@ -105,12 +99,16 @@ export class OrderController {
         notes
       );
 
-      if (!order) {
+      if (!updatedOrder) {
         sendErrorResponse(res, "Order not found", 404);
         return;
       }
 
-      sendSuccessResponse(res, { order }, "Order status updated successfully");
+      sendSuccessResponse(
+        res,
+        { order: updatedOrder },
+        "Order status updated successfully"
+      );
     } catch (error) {
       console.error("Error updating order status:", error);
       sendErrorResponse(res, "Failed to update order status", 500, error);
@@ -119,8 +117,13 @@ export class OrderController {
 
   async deleteOrder(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
       const { id } = req.params;
-      const deleted = await orderService.deleteOrder(id);
+      const deleted = await orderService.deleteOrder(id, req.user.id);
 
       if (!deleted) {
         sendErrorResponse(res, "Order not found", 404);
@@ -133,15 +136,37 @@ export class OrderController {
       sendErrorResponse(res, "Failed to delete order", 500, error);
     }
   }
+
+  async restoreOrder(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const { id } = req.params;
+      const restored = await orderService.restoreOrder(id, req.user.id);
+
+      if (!restored) {
+        sendErrorResponse(res, "Order not found or already restored", 404);
+        return;
+      }
+
+      sendSuccessResponse(res, null, "Order restored successfully");
+    } catch (error) {
+      console.error("Error restoring order:", error);
+      sendErrorResponse(res, "Failed to restore order", 500, error);
+    }
+  }
 }
 
 // Validation middleware for order operations
 export const orderValidation = {
   create: validate([
-    commonValidations.uuid("customerId"),
+    commonValidations.requiredString("customerId"),
     commonValidations.requiredString("customerName"),
     commonValidations.requiredString("customerAddress"),
-    commonValidations.requiredString("customerEmail"),
+    commonValidations.email,
     commonValidations.requiredString("customerPhone"),
     commonValidations.enum("status", [
       "pending",
@@ -150,25 +175,7 @@ export const orderValidation = {
       "delivered",
       "cancelled",
     ]),
-    body("orderItems")
-      .isArray({ min: 1 })
-      .withMessage("At least one order item is required"),
-    body("orderItems.*.productId").isUUID().withMessage("Invalid product ID"),
-    body("orderItems.*.quantity")
-      .isInt({ min: 1 })
-      .withMessage("Quantity must be at least 1"),
-    body("orderItems.*.boxes")
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage("Boxes must be a non-negative integer"),
-    body("orderItems.*.pieces")
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage("Pieces must be a non-negative integer"),
-    body("orderItems.*.pack")
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage("Pack must be a non-negative integer"),
+    commonValidations.requiredArray("orderItems"),
     commonValidations.optionalString("shippingMethod"),
     commonValidations.optionalString("notes"),
   ]),

@@ -20,14 +20,22 @@ export class CategoryController {
 
   async createCategory(req: Request, res: Response): Promise<void> {
     try {
-      const category = await categoryService.createCategory(req.body);
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const category = await categoryService.createCategory(
+        req.body,
+        req.user.id
+      );
       sendSuccessResponse(
         res,
         { category },
         "Category created successfully",
         201
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating category:", error);
 
       if (error.code === "23505") {
@@ -42,8 +50,18 @@ export class CategoryController {
 
   async deleteCategory(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
       const { id } = req.params;
-      const deleted = await categoryService.deleteCategory(id);
+      if (!id) {
+        sendErrorResponse(res, "Category ID is required", 400);
+        return;
+      }
+
+      const deleted = await categoryService.deleteCategory(id, req.user.id);
 
       if (!deleted) {
         sendErrorResponse(res, "Category not found", 404);
@@ -54,6 +72,33 @@ export class CategoryController {
     } catch (error) {
       console.error("Error deleting category:", error);
       sendErrorResponse(res, "Failed to delete category", 500, error);
+    }
+  }
+
+  async restoreCategory(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        sendErrorResponse(res, "Category ID is required", 400);
+        return;
+      }
+
+      const restored = await categoryService.restoreCategory(id, req.user.id);
+
+      if (!restored) {
+        sendErrorResponse(res, "Category not found or already restored", 404);
+        return;
+      }
+
+      sendSuccessResponse(res, null, "Category restored successfully");
+    } catch (error) {
+      console.error("Error restoring category:", error);
+      sendErrorResponse(res, "Failed to restore category", 500, error);
     }
   }
 }

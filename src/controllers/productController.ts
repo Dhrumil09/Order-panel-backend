@@ -59,14 +59,19 @@ export class ProductController {
 
   async createProduct(req: Request, res: Response): Promise<void> {
     try {
-      const product = await productService.createProduct(req.body);
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const product = await productService.createProduct(req.body, req.user.id);
       sendSuccessResponse(
         res,
         { product },
         "Product created successfully",
         201
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating product:", error);
 
       if (error.code === "23503") {
@@ -81,8 +86,17 @@ export class ProductController {
 
   async updateProduct(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
       const { id } = req.params;
-      const product = await productService.updateProduct(id, req.body);
+      const product = await productService.updateProduct(
+        id,
+        req.body,
+        req.user.id
+      );
 
       if (!product) {
         sendErrorResponse(res, "Product not found", 404);
@@ -90,7 +104,7 @@ export class ProductController {
       }
 
       sendSuccessResponse(res, { product }, "Product updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating product:", error);
 
       if (error.code === "23503") {
@@ -105,8 +119,13 @@ export class ProductController {
 
   async deleteProduct(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
       const { id } = req.params;
-      const deleted = await productService.deleteProduct(id);
+      const deleted = await productService.deleteProduct(id, req.user.id);
 
       if (!deleted) {
         sendErrorResponse(res, "Product not found", 404);
@@ -117,6 +136,28 @@ export class ProductController {
     } catch (error) {
       console.error("Error deleting product:", error);
       sendErrorResponse(res, "Failed to delete product", 500, error);
+    }
+  }
+
+  async restoreProduct(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendErrorResponse(res, "User not authenticated", 401);
+        return;
+      }
+
+      const { id } = req.params;
+      const restored = await productService.restoreProduct(id, req.user.id);
+
+      if (!restored) {
+        sendErrorResponse(res, "Product not found or already restored", 404);
+        return;
+      }
+
+      sendSuccessResponse(res, null, "Product restored successfully");
+    } catch (error) {
+      console.error("Error restoring product:", error);
+      sendErrorResponse(res, "Failed to restore product", 500, error);
     }
   }
 }

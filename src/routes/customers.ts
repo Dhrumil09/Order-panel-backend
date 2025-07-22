@@ -25,7 +25,10 @@ router.put(
   customerController.updateCustomer
 );
 
-// Delete customer
+// Delete customer (soft delete)
 router.delete("/:id", customerController.deleteCustomer);
+
+// Restore customer (undo soft delete)
+router.patch("/:id/restore", customerController.restoreCustomer);
 
 export default router;

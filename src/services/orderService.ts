@@ -4,8 +4,8 @@ import {
   CreateOrderRequest,
   OrderQueryParams,
   OrderWithCustomer,
+  PaginationInfo,
 } from "../../api-types";
-import { PaginationInfo } from "../types";
 
 export class OrderService {
   async getAllOrders(params: OrderQueryParams): Promise<{
@@ -35,7 +35,8 @@ export class OrderService {
       )
       .leftJoin("customers as c", "o.customer_id", "c.id")
       .leftJoin("users as u1", "o.created_by", "u1.id")
-      .leftJoin("users as u2", "o.updated_by", "u2.id");
+      .leftJoin("users as u2", "o.updated_by", "u2.id")
+      .where("o.is_deleted", false); // Filter out soft-deleted records
 
     // Apply search filter
     if (search) {
@@ -54,8 +55,8 @@ export class OrderService {
     // Apply date filters
     if (dateFilter) {
       const now = new Date();
-      let filterStartDate: Date;
-      let filterEndDate: Date;
+      let filterStartDate: Date | undefined;
+      let filterEndDate: Date | undefined;
 
       switch (dateFilter) {
         case "today":
@@ -95,8 +96,6 @@ export class OrderService {
             filterStartDate = new Date(startDate);
             filterEndDate = new Date(endDate);
             filterEndDate.setDate(filterEndDate.getDate() + 1); // Include end date
-          } else {
-            break;
           }
           break;
         default:
@@ -112,11 +111,9 @@ export class OrderService {
     }
 
     // Get total count for pagination
-    const countQuery = db("orders as o").leftJoin(
-      "customers as c",
-      "o.customer_id",
-      "c.id"
-    );
+    const countQuery = db("orders as o")
+      .leftJoin("customers as c", "o.customer_id", "c.id")
+      .where("o.is_deleted", false); // Filter out soft-deleted records
 
     // Apply the same filters to count query
     if (search) {
@@ -131,8 +128,8 @@ export class OrderService {
     }
     if (dateFilter) {
       const now = new Date();
-      let filterStartDate: Date;
-      let filterEndDate: Date;
+      let filterStartDate: Date | undefined;
+      let filterEndDate: Date | undefined;
 
       switch (dateFilter) {
         case "today":
@@ -172,8 +169,6 @@ export class OrderService {
             filterStartDate = new Date(startDate);
             filterEndDate = new Date(endDate);
             filterEndDate.setDate(filterEndDate.getDate() + 1);
-          } else {
-            break;
           }
           break;
         default:
@@ -196,11 +191,12 @@ export class OrderService {
 
     const orders = await query;
 
-    // Get order items for each order
+    // Get order items for each order (only non-deleted items)
     const ordersWithItems = await Promise.all(
       orders.map(async (order) => {
         const orderItems = await db("order_items")
           .where("order_id", order.id)
+          .where("is_deleted", false) // Filter out soft-deleted items
           .select("id", "product_name as name", "quantity", "price");
 
         return {
@@ -256,17 +252,20 @@ export class OrderService {
       .leftJoin("users as u1", "o.created_by", "u1.id")
       .leftJoin("users as u2", "o.updated_by", "u2.id")
       .where("o.id", id)
+      .where("o.is_deleted", false) // Filter out soft-deleted records
       .first();
 
     if (!order) {
       return null;
     }
 
-    // Get order items with full details
+    // Get order items with full details (only non-deleted items)
     const orderItems = await db("order_items as oi")
       .select("oi.*", "pv.name as variant_name")
       .leftJoin("product_variants as pv", "oi.product_variant_id", "pv.id")
-      .where("oi.order_id", id);
+      .where("oi.order_id", id)
+      .where("oi.is_deleted", false) // Filter out soft-deleted items
+      .where("pv.is_deleted", false); // Filter out soft-deleted variants
 
     return {
       id: order.id,
@@ -324,6 +323,7 @@ export class OrderService {
           notes: orderData.notes,
           created_by: userId,
           updated_by: userId,
+          is_deleted: false,
         })
         .returning("*");
 
@@ -335,13 +335,15 @@ export class OrderService {
       if (orderItems && orderItems.length > 0) {
         const orderItemData = await Promise.all(
           orderItems.map(async (item) => {
-            // Get product and variant details
+            // Get product and variant details (only non-deleted)
             const product = await trx("products")
               .where("id", item.productId)
+              .where("is_deleted", false)
               .first();
 
             const variant = await trx("product_variants")
               .where("product_id", item.productId)
+              .where("is_deleted", false)
               .first();
 
             if (!product || !variant) {
@@ -369,6 +371,7 @@ export class OrderService {
               available_in_pack: product.available_in_pack,
               created_by: userId,
               updated_by: userId,
+              is_deleted: false,
             };
           })
         );
@@ -385,11 +388,14 @@ export class OrderService {
         })
         .returning("*");
 
-      // Update customer totals
-      await trx("customers").where("id", orderData.customerId).increment({
-        total_orders: 1,
-        total_spent: totalAmount,
-      });
+      // Update customer totals (only if customer is not deleted)
+      await trx("customers")
+        .where("id", orderData.customerId)
+        .where("is_deleted", false)
+        .increment({
+          total_orders: 1,
+          total_spent: totalAmount,
+        });
 
       return {
         id: updatedOrder.id,
@@ -405,8 +411,8 @@ export class OrderService {
         trackingNumber: updatedOrder.tracking_number,
         notes: updatedOrder.notes,
         total: parseFloat(updatedOrder.total_amount),
-        createdBy: null, // Will be populated if needed
-        updatedBy: null,
+        createdBy: undefined, // Will be populated if needed
+        updatedBy: undefined,
       };
     });
   }
@@ -426,6 +432,7 @@ export class OrderService {
   } | null> {
     const [order] = await db("orders")
       .where("id", id)
+      .where("is_deleted", false) // Only update non-deleted orders
       .update({
         status,
         tracking_number: trackingNumber,
@@ -447,9 +454,28 @@ export class OrderService {
     };
   }
 
-  async deleteOrder(id: string): Promise<boolean> {
-    const deletedCount = await db("orders").where("id", id).del();
+  async deleteOrder(id: string, userId: string): Promise<boolean> {
+    // Soft delete - set is_deleted flag instead of removing record
+    const deletedCount = await db("orders")
+      .where("id", id)
+      .where("is_deleted", false) // Only soft-delete non-deleted records
+      .update({
+        is_deleted: true,
+        updated_by: userId,
+      });
     return deletedCount > 0;
+  }
+
+  async restoreOrder(id: string, userId: string): Promise<boolean> {
+    // Restore soft-deleted order
+    const restoredCount = await db("orders")
+      .where("id", id)
+      .where("is_deleted", true) // Only restore deleted records
+      .update({
+        is_deleted: false,
+        updated_by: userId,
+      });
+    return restoredCount > 0;
   }
 }
 

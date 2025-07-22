@@ -11,7 +11,10 @@ router.get("/", companyController.getAllCompanies);
 // Create company
 router.post("/", companyValidation.create, companyController.createCompany);
 
-// Delete company
+// Delete company (soft delete)
 router.delete("/:id", companyController.deleteCompany);
+
+// Restore company (undo soft delete)
+router.patch("/:id/restore", companyController.restoreCompany);
 
 export default router;
