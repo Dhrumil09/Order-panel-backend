@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Soft Delete Behavior
+
+When a "delete" command is issued, the agent must update a flag (e.g., isDeleted: true) instead of permanently removing the item from the database.
+
+Audit Trail on Creation
+On creating any resource (product, customer, order), the agent must store both createdBy and updatedBy user identifiers along with timestamps (createdAt, updatedAt).
+
+Concurrent Order Creation Safety
+
+The agent must ensure that when multiple users create orders at the same time, their actions are handled with proper concurrency control (e.g., atomic transactions, locks, or queueing) to prevent data overrides or race conditions.
