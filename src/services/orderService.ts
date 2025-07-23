@@ -52,9 +52,10 @@ export class OrderService {
     // Apply search filter
     if (search) {
       query = query.where(function () {
-        this.whereILike("o.customer_name", `%${search}%`)
-          .orWhereILike("o.customer_address", `%${search}%`)
-          .orWhereILike("o.id", `%${search}%`);
+        this.whereILike("o.customer_name", `%${search}%`).orWhereILike(
+          "o.customer_address",
+          `%${search}%`
+        );
       });
     }
 
@@ -129,9 +130,10 @@ export class OrderService {
     // Apply the same filters to count query
     if (search) {
       countQuery.where(function () {
-        this.whereILike("o.customer_name", `%${search}%`)
-          .orWhereILike("o.customer_address", `%${search}%`)
-          .orWhereILike("o.id", `%${search}%`);
+        this.whereILike("o.customer_name", `%${search}%`).orWhereILike(
+          "o.customer_address",
+          `%${search}%`
+        );
       });
     }
     if (status) {
@@ -209,7 +211,18 @@ export class OrderService {
         const orderItems = await db("order_items")
           .where("order_id", order.id)
           .where("is_deleted", false) // Filter out soft-deleted items
-          .select("id", "product_name as name", "quantity", "price");
+          .select(
+            "id",
+            "product_name as name",
+            "quantity",
+            "price",
+            "boxes",
+            "pieces",
+            "pack",
+            "pack_size",
+            "available_in_pieces",
+            "available_in_pack"
+          );
 
         return {
           id: order.id,
@@ -225,6 +238,12 @@ export class OrderService {
             name: item.name,
             quantity: item.quantity,
             price: parseFloat(item.price),
+            boxes: item.boxes,
+            pieces: item.pieces,
+            pack: item.pack,
+            packSize: item.pack_size,
+            availableInPieces: item.available_in_pieces,
+            availableInPack: item.available_in_pack,
           })),
           shippingMethod: order.shipping_method,
           trackingNumber: order.tracking_number,
