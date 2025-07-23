@@ -8,6 +8,18 @@ import {
 } from "../../api-types";
 
 export class CustomerService {
+  // Helper function to map API sortBy parameters to database column names
+  private mapSortByToColumn(sortBy: string): string {
+    const sortByMap: Record<string, string> = {
+      shopName: "c.shop_name",
+      ownerName: "c.owner_name",
+      registrationDate: "c.registration_date",
+      totalOrders: "c.total_orders",
+    };
+
+    return sortByMap[sortBy] || "c.registration_date"; // default fallback
+  }
+
   async getAllCustomers(params: CustomerQueryParams): Promise<{
     customers: Customer[];
     pagination: PaginationInfo;
@@ -20,7 +32,7 @@ export class CustomerService {
       area,
       city,
       state,
-      sortBy = "registration_date",
+      sortBy = "registrationDate",
       sortOrder = "desc",
     } = params;
     const offset = (page - 1) * limit;
@@ -87,8 +99,9 @@ export class CustomerService {
     const totalItems = await countQuery.count("* as count").first();
     const total = parseInt((totalItems?.count as string) || "0");
 
-    // Apply sorting and pagination
-    query = query.orderBy(sortBy, sortOrder).limit(limit).offset(offset);
+    // Apply sorting and pagination - map sortBy to database column
+    const dbSortColumn = this.mapSortByToColumn(sortBy);
+    query = query.orderBy(dbSortColumn, sortOrder).limit(limit).offset(offset);
 
     const customers = await query;
 
@@ -109,8 +122,8 @@ export class CustomerService {
       totalOrders: customer.total_orders,
       totalSpent: parseFloat(customer.total_spent),
       notes: customer.notes,
-      createdBy: customer.created_by_name,
-      updatedBy: customer.updated_by_name,
+      ...(customer.created_by_name && { createdBy: customer.created_by_name }),
+      ...(customer.updated_by_name && { updatedBy: customer.updated_by_name }),
     }));
 
     const pagination: PaginationInfo = {
@@ -167,8 +180,8 @@ export class CustomerService {
       totalOrders: customer.total_orders,
       totalSpent: parseFloat(customer.total_spent),
       notes: customer.notes,
-      createdBy: customer.created_by_name,
-      updatedBy: customer.updated_by_name,
+      ...(customer.created_by && { createdBy: customer.created_by }),
+      ...(customer.updated_by && { updatedBy: customer.updated_by }),
       orders: orders.map((order) => ({
         id: order.id,
         date: order.date,
@@ -218,8 +231,8 @@ export class CustomerService {
       totalOrders: customer.total_orders,
       totalSpent: parseFloat(customer.total_spent),
       notes: customer.notes,
-      createdBy: undefined,
-      updatedBy: undefined,
+      ...(customer.created_by && { createdBy: customer.created_by }),
+      ...(customer.updated_by && { updatedBy: customer.updated_by }),
     };
   }
 
@@ -267,8 +280,8 @@ export class CustomerService {
       totalOrders: customer.total_orders,
       totalSpent: parseFloat(customer.total_spent),
       notes: customer.notes,
-      createdBy: undefined,
-      updatedBy: undefined,
+      ...(customer.created_by && { createdBy: customer.created_by }),
+      ...(customer.updated_by && { updatedBy: customer.updated_by }),
     };
   }
 

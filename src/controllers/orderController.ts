@@ -186,8 +186,10 @@ export const orderValidation = {
     commonValidations.requiredString("customerId"),
     commonValidations.requiredString("customerName"),
     commonValidations.requiredString("customerAddress"),
-    commonValidations.email,
-    commonValidations.requiredString("customerPhone"),
+    body("customerEmail").isEmail().withMessage("Invalid email format"),
+    body("customerPhone")
+      .matches(/^\+?[\d\s\-\(\)]+$/)
+      .withMessage("Invalid phone number format"),
     commonValidations.enum("status", [
       "pending",
       "processing",

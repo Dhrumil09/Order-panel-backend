@@ -309,12 +309,23 @@ export class ProductService {
         await trx("product_variants").insert(variantData);
       }
 
+      // Get the created variants
+      const variants = await trx("product_variants")
+        .where("product_id", product.id)
+        .where("is_deleted", false)
+        .select("id", "name", "mrp")
+        .orderBy("mrp");
+
       return {
         id: product.id,
         name: product.name,
         companyId: product.company_id,
         categoryId: product.category_id,
-        variants: [], // Will be populated if needed
+        variants: variants.map((variant) => ({
+          id: variant.id,
+          name: variant.name,
+          mrp: parseFloat(variant.mrp),
+        })),
         isOutOfStock: product.is_out_of_stock,
         availableInPieces: product.available_in_pieces,
         availableInPack: product.available_in_pack,
@@ -370,12 +381,23 @@ export class ProductService {
         await trx("product_variants").insert(variantData);
       }
 
+      // Get the updated variants
+      const variants = await trx("product_variants")
+        .where("product_id", product.id)
+        .where("is_deleted", false)
+        .select("id", "name", "mrp")
+        .orderBy("mrp");
+
       return {
         id: product.id,
         name: product.name,
         companyId: product.company_id,
         categoryId: product.category_id,
-        variants: [], // Will be populated if needed
+        variants: variants.map((variant) => ({
+          id: variant.id,
+          name: variant.name,
+          mrp: parseFloat(variant.mrp),
+        })),
         isOutOfStock: product.is_out_of_stock,
         availableInPieces: product.available_in_pieces,
         availableInPack: product.available_in_pack,

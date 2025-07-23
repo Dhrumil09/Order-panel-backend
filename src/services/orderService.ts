@@ -8,6 +8,17 @@ import {
 } from "../../api-types";
 
 export class OrderService {
+  // Helper function to map API sortBy parameters to database column names
+  private mapSortByToColumn(sortBy: string): string {
+    const sortByMap: Record<string, string> = {
+      customerName: "o.customer_name",
+      date: "o.order_date",
+      status: "o.status",
+    };
+
+    return sortByMap[sortBy] || "o.order_date"; // default fallback
+  }
+
   async getAllOrders(params: OrderQueryParams): Promise<{
     orders: Order[];
     pagination: PaginationInfo;
@@ -20,7 +31,7 @@ export class OrderService {
       dateFilter,
       startDate,
       endDate,
-      sortBy = "order_date",
+      sortBy = "date",
       sortOrder = "desc",
     } = params;
     const offset = (page - 1) * limit;
@@ -186,8 +197,9 @@ export class OrderService {
     const totalItems = await countQuery.count("* as count").first();
     const total = parseInt((totalItems?.count as string) || "0");
 
-    // Apply sorting and pagination
-    query = query.orderBy(sortBy, sortOrder).limit(limit).offset(offset);
+    // Apply sorting and pagination - map sortBy to database column
+    const dbSortColumn = this.mapSortByToColumn(sortBy);
+    query = query.orderBy(dbSortColumn, sortOrder).limit(limit).offset(offset);
 
     const orders = await query;
 
@@ -411,8 +423,8 @@ export class OrderService {
         trackingNumber: updatedOrder.tracking_number,
         notes: updatedOrder.notes,
         total: parseFloat(updatedOrder.total_amount),
-        createdBy: undefined, // Will be populated if needed
-        updatedBy: undefined,
+        ...(updatedOrder.created_by && { createdBy: updatedOrder.created_by }),
+        ...(updatedOrder.updated_by && { updatedBy: updatedOrder.updated_by }),
       };
     });
   }
