@@ -3,7 +3,7 @@ services:
   - type: web
     name: Order-panel-backend
     runtime: node
-    repo: https://github.com/Dhrumil09/Order-panel-backend
+    repo: https://github.com/harshdevelopes/Order-panel-backend
     plan: free
     rootDir: ./
     buildCommand: npm ci && npm run build
