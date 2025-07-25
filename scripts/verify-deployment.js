@@ -27,6 +27,17 @@ if (fs.existsSync(distPath)) {
     const stats = fs.statSync(indexPath);
     console.log("Index file size:", stats.size, "bytes");
     console.log("Index file modified:", stats.mtime);
+
+    // Try to read the first few lines to verify it's valid
+    try {
+      const content = fs.readFileSync(indexPath, "utf8");
+      console.log(
+        "First 200 characters of index.js:",
+        content.substring(0, 200)
+      );
+    } catch (error) {
+      console.log("Error reading index.js:", error.message);
+    }
   }
 }
 
@@ -38,5 +49,18 @@ if (fs.existsSync(packagePath)) {
   console.log("Main field:", packageJson.main);
   console.log("Start script:", packageJson.scripts?.start);
 }
+
+// Check environment variables
+console.log("\n=== Checking Environment Variables ===");
+const requiredEnvVars = [
+  "DB_HOST",
+  "DB_NAME",
+  "DB_USER",
+  "DB_PASSWORD",
+  "DATABASE_URL",
+];
+requiredEnvVars.forEach((varName) => {
+  console.log(`${varName}: ${process.env[varName] ? "SET" : "NOT SET"}`);
+});
 
 console.log("\n=== Verification Complete ===");
