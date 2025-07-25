@@ -3,7 +3,7 @@ require("dotenv").config();
 module.exports = {
   development: {
     client: "postgresql",
-    connection: {
+    connection: process.env.DATABASE_URL || {
       host: process.env.DB_HOST || "localhost",
       port: process.env.DB_PORT || 5432,
       user: process.env.DB_USER || "postgres",
@@ -25,7 +25,7 @@ module.exports = {
 
   test: {
     client: "postgresql",
-    connection: {
+    connection: process.env.TEST_DATABASE_URL || {
       host: process.env.DB_HOST || "localhost",
       port: process.env.DB_PORT || 5432,
       user: process.env.DB_USER || "postgres",
@@ -47,7 +47,7 @@ module.exports = {
 
   production: {
     client: "postgresql",
-    connection: {
+    connection: process.env.DATABASE_URL || {
       host: process.env.DB_HOST,
       port: process.env.DB_PORT || 5432,
       user: process.env.DB_USER,

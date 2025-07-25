@@ -3,7 +3,7 @@ import { databaseConfig } from "../utils/config";
 
 const db = knex({
   client: "postgresql",
-  connection: {
+  connection: process.env.DATABASE_URL || {
     host: databaseConfig.host,
     port: databaseConfig.port,
     user: databaseConfig.user,

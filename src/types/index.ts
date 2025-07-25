@@ -24,6 +24,7 @@ export type DatabaseConfig = {
   database: string;
   user: string;
   password: string;
+  url: string;
 };
 
 export type ServerConfig = {

@@ -4,6 +4,7 @@ import { DatabaseConfig, ServerConfig } from "../types";
 dotenv.config();
 
 export const databaseConfig: DatabaseConfig = {
+  url: process.env.DATABASE_URL || "",
   host: process.env.DB_HOST || "localhost",
   port: parseInt(process.env.DB_PORT || "5432", 10),
   database: process.env.DB_NAME || "order_panel",

@@ -9,6 +9,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "jest",
     "test:db": "node scripts/test-db.js",
+    "test:neon": "node scripts/test-neon-db.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "migrate": "ts-node ./node_modules/knex/bin/cli.js migrate:latest",
