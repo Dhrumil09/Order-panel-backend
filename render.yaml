@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: ./
-    buildCommand: npm ci && npm run build && pwd && ls -la && ls -la dist/
+    buildCommand: npm ci && npm run build && npm run verify
     startCommand: node dist/index.js
     envVars:
       - key: NODE_ENV

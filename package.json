@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/index.js",
+    "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "jest",
     "test:db": "node scripts/test-db.js",
@@ -17,7 +17,8 @@
     "migrate:make": "ts-node ./node_modules/knex/bin/cli.js migrate:make",
     "seed": "ts-node ./node_modules/knex/bin/cli.js seed:run",
     "seed:make": "knex seed:make",
-    "deploy:render": "./scripts/deploy-render.sh"
+    "deploy:render": "./scripts/deploy-render.sh",
+    "verify": "node scripts/verify-deployment.js"
   },
   "keywords": [
     "nodejs",
