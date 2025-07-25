@@ -17,7 +17,7 @@
     "migrate:make": "ts-node ./node_modules/knex/bin/cli.js migrate:make",
     "seed": "ts-node ./node_modules/knex/bin/cli.js seed:run",
     "seed:make": "knex seed:make",
-    "deploy:railway": "./scripts/deploy-railway.sh"
+    "deploy:render": "./scripts/deploy-render.sh"
   },
   "keywords": [
     "nodejs",

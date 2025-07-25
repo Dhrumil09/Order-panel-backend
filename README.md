@@ -280,6 +280,46 @@ After deployment, you need to run migrations:
    - Verify `PORT` environment variable is set
    - Ensure all required environment variables are configured
 
+## 🚀 Deployment
+
+### Railway Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed Railway deployment instructions.
+
+### Render.com Deployment
+
+See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed Render.com deployment instructions.
+
+#### Quick Render.com Setup
+
+1. **Connect Repository**
+
+   - Sign up at [render.com](https://render.com)
+   - Connect your GitHub repository
+
+2. **Create Web Service**
+
+   - Use the provided `render.yaml` for automatic configuration
+   - Or manually create a Node.js web service
+
+3. **Configure Environment**
+
+   ```bash
+   NODE_ENV=production
+   PORT=10000
+   JWT_SECRET=your-secret-key
+   CORS_ORIGIN=https://your-frontend.com
+   ```
+
+4. **Create Database**
+
+   - Add a PostgreSQL database service
+   - Render will automatically link it to your web service
+
+5. **Deploy**
+   - Render will automatically deploy on git push
+   - Monitor logs for migration status
+
 ## 🤝 Contributing
 
 1. Fork the repository
