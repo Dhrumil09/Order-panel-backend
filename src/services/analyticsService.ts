@@ -67,7 +67,7 @@ export class AnalyticsService {
         db.raw("SUM(total_amount) as revenue")
       )
       .groupBy(db.raw("DATE(order_date)"))
-      .orderBy(db.raw("DATE(order_date)"));
+      .orderBy("date");
 
     // Get top products
     const topProducts = await db("order_items as oi")
@@ -80,7 +80,7 @@ export class AnalyticsService {
         db.raw("SUM(oi.quantity * oi.price) as total_revenue")
       )
       .groupBy("oi.product_id", "oi.product_name")
-      .orderBy(db.raw("SUM(oi.quantity)"), "desc")
+      .orderBy("total_quantity", "desc")
       .limit(10);
 
     // Get top customers
@@ -93,7 +93,7 @@ export class AnalyticsService {
         db.raw("SUM(total_amount) as total_revenue")
       )
       .groupBy("customer_id", "customer_name")
-      .orderBy(db.raw("SUM(total_amount)"), "desc")
+      .orderBy("total_revenue", "desc")
       .limit(10);
 
     // Calculate growth rate (comparing with previous period)
@@ -124,7 +124,7 @@ export class AnalyticsService {
         (salesStats?.avg_order_value as string) || "0"
       ),
       growthRate: Math.round(growthRate * 100) / 100,
-      dailyData: dailyData.map((day) => ({
+      dailyData: dailyData.map((day: any) => ({
         date: day.date,
         revenue: parseFloat((day.revenue as string) || "0"),
         orders: parseInt((day.orders as string) || "0"),
@@ -219,8 +219,8 @@ export class AnalyticsService {
       activeCustomers,
       customerGrowth: Math.round(customerGrowth * 100) / 100,
       customerRetention: Math.round(customerRetention * 100) / 100,
-      topAreas: topAreas.map((area) => ({
-        area: area.area,
+      topAreas: topAreas.map((area: any) => ({
+        area: String(area.area || ""),
         customerCount: parseInt((area.customer_count as string) || "0"),
       })),
       customerStatus: statusMap,
@@ -251,7 +251,7 @@ export class AnalyticsService {
         db.raw("SUM(oi.quantity * oi.price) as total_revenue")
       )
       .groupBy("p.id", "p.name")
-      .orderBy(db.raw("SUM(oi.quantity)"), "desc")
+      .orderBy("total_sales", "desc")
       .limit(10);
 
     // Get category performance
@@ -265,7 +265,7 @@ export class AnalyticsService {
         db.raw("SUM(oi.quantity) as total_sales")
       )
       .groupBy("c.id", "c.name")
-      .orderBy(db.raw("SUM(oi.quantity)"), "desc");
+      .orderBy("total_sales", "desc");
 
     // Get company performance
     const companyPerformance = await db("order_items as oi")
@@ -278,7 +278,7 @@ export class AnalyticsService {
         db.raw("SUM(oi.quantity) as total_sales")
       )
       .groupBy("comp.id", "comp.name")
-      .orderBy(db.raw("SUM(oi.quantity)"), "desc");
+      .orderBy("total_sales", "desc");
 
     return {
       totalProducts: parseInt((productStats[0]?.count as string) || "0"),

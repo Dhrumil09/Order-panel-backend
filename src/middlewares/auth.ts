@@ -60,14 +60,12 @@ export function generateTokenPair(
   const refreshSecret =
     process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
 
-  const accessOptions: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN ||
-      "15m") as jwt.SignOptions["expiresIn"], // Shorter expiry for access token
+  const accessOptions: jwt.SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN || "15m") as any,
   };
 
-  const refreshOptions: SignOptions = {
-    expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ||
-      "7d") as jwt.SignOptions["expiresIn"], // Longer expiry for refresh token
+  const refreshOptions: jwt.SignOptions = {
+    expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as any,
   };
 
   const accessToken = jwt.sign(payload, accessSecret, accessOptions);
@@ -80,9 +78,8 @@ export function generateAccessToken(
   payload: Omit<JWTPayload, "iat" | "exp">
 ): string {
   const secret = process.env.JWT_SECRET || "your-secret-key";
-  const options: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN ||
-      "15m") as jwt.SignOptions["expiresIn"],
+  const options: jwt.SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN || "15m") as any,
   };
 
   return jwt.sign(payload, secret, options);
