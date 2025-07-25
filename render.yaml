@@ -1,7 +1,7 @@
 services:
   - type: web
     name: order-panel-backend
-    env: node
+    runtime: node
     plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm start
