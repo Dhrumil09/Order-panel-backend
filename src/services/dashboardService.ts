@@ -1,5 +1,5 @@
 import db from "../db";
-import { DashboardStats, LatestOrder } from "../../api-types";
+import { DashboardStats, LatestOrder } from "../api-types";
 
 export class DashboardService {
   async getDashboardStats(): Promise<DashboardStats> {

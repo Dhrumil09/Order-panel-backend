@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import customerService from "../services/customerService";
 import { sendSuccessResponse, sendErrorResponse } from "../utils/response";
 import { validate, commonValidations } from "../utils/validation";
-import { CustomerQueryParams } from "../../api-types";
+import { CustomerQueryParams } from "../api-types";
 
 export class CustomerController {
   async getAllCustomers(req: Request, res: Response): Promise<void> {

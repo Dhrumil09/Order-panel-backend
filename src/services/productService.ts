@@ -5,7 +5,7 @@ import {
   ProductQueryParams,
   ProductWithRelations,
   PaginationInfo,
-} from "../../api-types";
+} from "../api-types";
 
 export class ProductService {
   async getAllProducts(params: ProductQueryParams): Promise<{

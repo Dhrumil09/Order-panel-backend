@@ -5,7 +5,7 @@ import {
   OrderQueryParams,
   OrderWithCustomer,
   PaginationInfo,
-} from "../../api-types";
+} from "../api-types";
 
 export class OrderService {
   // Helper function to map API sortBy parameters to database column names

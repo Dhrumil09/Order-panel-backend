@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ApiResponse, PaginationInfo } from "../../api-types";
+import { ApiResponse, PaginationInfo } from "../api-types";
 
 export function sendSuccessResponse<T>(
   res: Response,

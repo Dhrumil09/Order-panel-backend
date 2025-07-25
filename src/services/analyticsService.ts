@@ -4,7 +4,7 @@ import {
   CustomerAnalytics,
   ProductAnalytics,
   AnalyticsQueryParams,
-} from "../../api-types";
+} from "../api-types";
 
 export class AnalyticsService {
   async getSalesAnalytics(

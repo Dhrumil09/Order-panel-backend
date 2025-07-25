@@ -10,7 +10,7 @@ import {
   LoginResponse,
   CreateUserRequest,
   User,
-} from "../../api-types";
+} from "../api-types";
 
 export class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {

@@ -1,5 +1,5 @@
 import db from "../db";
-import { Category, CreateCategoryRequest } from "../../api-types";
+import { Category, CreateCategoryRequest } from "../api-types";
 
 export class CategoryService {
   async getAllCategories(): Promise<Category[]> {

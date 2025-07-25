@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import analyticsService from "../services/analyticsService";
 import { sendSuccessResponse, sendErrorResponse } from "../utils/response";
-import { AnalyticsQueryParams } from "../../api-types";
+import { AnalyticsQueryParams } from "../api-types";
 
 export class AnalyticsController {
   async getSalesAnalytics(req: Request, res: Response): Promise<void> {

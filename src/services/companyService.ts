@@ -1,5 +1,5 @@
 import db from "../db";
-import { Company, CreateCompanyRequest } from "../../api-types";
+import { Company, CreateCompanyRequest } from "../api-types";
 
 export class CompanyService {
   async getAllCompanies(): Promise<Company[]> {

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import orderService from "../services/orderService";
 import { sendSuccessResponse, sendErrorResponse } from "../utils/response";
 import { validate, commonValidations } from "../utils/validation";
-import { OrderQueryParams } from "../../api-types";
+import { OrderQueryParams } from "../api-types";
 import { body } from "express-validator";
 
 export class OrderController {
